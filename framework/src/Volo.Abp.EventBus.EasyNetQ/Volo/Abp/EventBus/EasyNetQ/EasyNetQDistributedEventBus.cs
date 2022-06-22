@@ -58,10 +58,22 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         SubscribeHandlers(AbpDistributedEventBusOptions.Handlers);
     }
 
-    public override Task ProcessFromInboxAsync(
+    public async override Task ProcessFromInboxAsync(
         IncomingEventInfo incomingEvent, InboxConfig inboxConfig)
     {
-        throw new NotImplementedException();
+        var eventType = EventTypes.GetOrDefault(incomingEvent.EventName);
+        if (eventType == null) return;
+
+        var eventData = Serializer.Deserialize(incomingEvent.EventData, eventType);
+        var exceptions = new List<Exception>();
+
+        // todo-kai: pipeline handle if required;
+        await TriggerHandlersAsync(eventType, eventData, exceptions, inboxConfig);
+
+        if (exceptions.Any())
+        {
+            ThrowOriginalExceptions(eventType, exceptions);
+        }
     }
 
     public override async Task PublishFromOutboxAsync(OutgoingEventInfo outgoingEvent, OutboxConfig outboxConfig)
@@ -69,17 +81,24 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         string eventName = outgoingEvent.EventName;
         byte[] eventData = outgoingEvent.EventData;
         Type eventType = EventTypes.GetOrDefault(eventName);
-
         object @event = Serializer.Deserialize(eventData, eventType);
 
-        await Bus.PubSub.PublishAsync(@event, config =>
+        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Priority, out var priority);
+        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Topic, out var topic);
+        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Expires, out var expire);
+
+        await PublishAsync(eventType, @event, (byte?)priority, (string)topic, (int?)expire);
+    }
+
+    public async Task PublishAsync(
+        Type eventType, object eventData, 
+        byte? priority, string topic, int? expire)
+    {
+        await Bus.PubSub.PublishAsync(eventData, config =>
         {
-            if (outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Priority, out var priority))
-                config.WithPriority((byte)priority);
-            if (outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Topic, out var topic))
-                config.WithTopic((string)priority);
-            if (outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Expires, out var expire))
-                config.WithExpires((int)expire);
+            if (priority.HasValue) config.WithPriority(priority.Value);
+            if (!topic.IsNullOrEmpty()) config.WithTopic(topic);
+            if (expire.HasValue) config.WithExpires(expire.Value);
         }).ConfigureAwait(false);
     }
 
@@ -181,9 +200,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
             .ToArray();
     }
 
-    protected override Task PublishToEventBusAsync(Type eventType, object eventData)
+    protected async override Task PublishToEventBusAsync(Type eventType, object eventData)
     {
-        throw new NotImplementedException();
+        await PublishAsync(eventType, eventData, null, null, null);
     }
 
     protected override byte[] Serialize(object eventData)

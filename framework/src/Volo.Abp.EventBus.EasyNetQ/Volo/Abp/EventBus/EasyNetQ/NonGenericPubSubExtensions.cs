@@ -55,6 +55,7 @@ public static class NonGenericPubSubExtensions
     //    return publishDelegate(pubSub, message, messageType, configure, cancellationToken);
     //}
 
+    // todo-kai-test: remove messagetype parameter | use messagetype directly
     public static AwaitableDisposable<SubscriptionResult> SubscribeAsync(
         this IPubSub pubSub,
         string subscriptionId,
