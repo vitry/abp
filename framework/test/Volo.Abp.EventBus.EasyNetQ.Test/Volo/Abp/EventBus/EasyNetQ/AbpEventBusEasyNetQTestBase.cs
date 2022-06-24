@@ -1,6 +1,4 @@
 ﻿using Volo.Abp.EventBus.Distributed;
-using Volo.Abp.EventBus.EasyNetQ.Test.Volo.Abp.EventBus.EasyNetQ;
-using Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
 using Volo.Abp.Testing;
 
 namespace Volo.Abp.EventBus.EasyNetQ;

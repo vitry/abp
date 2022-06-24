@@ -8,14 +8,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EventBus.Distributed;
+using Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
 using Volo.Abp.Guids;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Threading;
 using Volo.Abp.Timing;
 using Volo.Abp.Uow;
-using static Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ.EasyNetQConst;
+using static Volo.Abp.EventBus.EasyNetQ.EasyNetQConst;
 
-namespace Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
+namespace Volo.Abp.EventBus.EasyNetQ;
 
 [Dependency(ReplaceServices = true)]
 [ExposeServices(typeof(IDistributedEventBus), typeof(EasyNetQDistributedEventBus))]
@@ -78,10 +79,10 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
     public override async Task PublishFromOutboxAsync(OutgoingEventInfo outgoingEvent, OutboxConfig outboxConfig)
     {
-        string eventName = outgoingEvent.EventName;
-        byte[] eventData = outgoingEvent.EventData;
-        Type eventType = EventTypes.GetOrDefault(eventName);
-        object @event = Serializer.Deserialize(eventData, eventType);
+        var eventName = outgoingEvent.EventName;
+        var eventData = outgoingEvent.EventData;
+        var eventType = EventTypes.GetOrDefault(eventName);
+        var @event = Serializer.Deserialize(eventData, eventType);
 
         outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Priority, out var priority);
         outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Topic, out var topic);
@@ -91,7 +92,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
     }
 
     public async Task PublishAsync(
-        Type eventType, object eventData, 
+        Type eventType, object eventData,
         byte? priority, string topic, int? expire)
     {
         await Bus.PubSub.PublishAsync(eventData, config =>
@@ -104,7 +105,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
     public override async Task PublishManyFromOutboxAsync(IEnumerable<OutgoingEventInfo> outgoingEvents, OutboxConfig outboxConfig)
     {
-        foreach (OutgoingEventInfo outgoingEvent in outgoingEvents)
+        foreach (var outgoingEvent in outgoingEvents)
         {
             await PublishFromOutboxAsync(@outgoingEvent, outboxConfig).ConfigureAwait(false);
         }
@@ -195,7 +196,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
     {
         return _handlerFactories
             .Where(hf => ShouldTriggerEventForHandler(eventType, hf.Key))
-            .Select(handlerFactory => 
+            .Select(handlerFactory =>
                 new EventTypeWithEventHandlerFactories(handlerFactory.Key, handlerFactory.Value))
             .ToArray();
     }

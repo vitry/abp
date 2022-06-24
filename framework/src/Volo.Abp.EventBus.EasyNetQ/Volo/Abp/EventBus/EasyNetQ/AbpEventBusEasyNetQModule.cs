@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.EasyNetQ;
-using Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EventBus.EasyNetQ;

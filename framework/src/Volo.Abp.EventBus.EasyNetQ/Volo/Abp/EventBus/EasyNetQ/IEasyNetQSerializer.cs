@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
+namespace Volo.Abp.EventBus.EasyNetQ;
 
 public interface IEasyNetQSerializer
 {
