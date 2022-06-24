@@ -9,7 +9,7 @@ using EasyNetQ.Internals;
 namespace Volo.Abp.EventBus.EasyNetQ.Volo.Abp.EventBus.EasyNetQ;
 
 //using NonGenericPublishDelegate = Func<IPubSub, object, Type, Action<IPublishConfiguration>, CancellationToken, Task>;
-using NonGenericSubscribeDelegate = Func<IPubSub, string, Type, Func<object, Type, CancellationToken, Task>, Action<ISubscriptionConfiguration>, CancellationToken, AwaitableDisposable<SubscriptionResult>>;
+using NonGenericSubscribeDelegate = Func<IPubSub, string, Type, Func<object, Type, CancellationToken, Task>, Action<ISubscriptionConfiguration>, CancellationToken, AwaitableDisposable<ISubscriptionResult>>;
 
 public static class NonGenericPubSubExtensions
 {
@@ -56,7 +56,7 @@ public static class NonGenericPubSubExtensions
     //}
 
     // todo-kai-test: remove messagetype parameter | use messagetype directly
-    public static AwaitableDisposable<SubscriptionResult> SubscribeAsync(
+    public static AwaitableDisposable<ISubscriptionResult> SubscribeAsync(
         this IPubSub pubSub,
         string subscriptionId,
         Type messageType,

@@ -51,6 +51,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
     {
         AbpEasyNetQEventBusOptions = options.Value;
         Serializer = serializer;
+
+        HandlerFactories = new ConcurrentDictionary<Type, List<IEventHandlerFactory>>();
+        EventTypes = new ConcurrentDictionary<string, Type>();
     }
 
     public void Initialize()
@@ -95,7 +98,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         Type eventType, object eventData,
         byte? priority, string topic, int? expire)
     {
-        await Bus.PubSub.PublishAsync(eventData, config =>
+        await Bus.PubSub.PublishAsync(eventData, eventType, config =>
         {
             if (priority.HasValue) config.WithPriority(priority.Value);
             if (!topic.IsNullOrEmpty()) config.WithTopic(topic);
@@ -132,7 +135,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
                 /* todo-kai: config subscribe if required */
             });
 
-        return subscribe.As<IDisposable>();
+        return new EventHandlerFactoryUnregistrar(this, eventType, factory);
     }
 
     public override void Unsubscribe<TEvent>(Func<TEvent, Task> action)
