@@ -1,12 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Volo.Abp.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
 
 [DependsOn(
-    typeof(AbpEventBusModule),
-    typeof(AbpEasyNetQModule))]
+    typeof(AbpEventBusModule)
+    )]
 public class AbpEventBusEasyNetQModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
@@ -22,5 +21,13 @@ public class AbpEventBusEasyNetQModule : AbpModule
             .ServiceProvider
             .GetRequiredService<EasyNetQDistributedEventBus>()
             .Initialize();
+    }
+
+    public override void OnApplicationShutdown(ApplicationShutdownContext context)
+    {
+        context
+            .ServiceProvider
+            .GetRequiredService<EasyNetQDistributedEventBus>()
+            .ShutDown();
     }
 }

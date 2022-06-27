@@ -22,8 +22,6 @@ namespace Volo.Abp.EventBus.EasyNetQ;
 [ExposeServices(typeof(IDistributedEventBus), typeof(EasyNetQDistributedEventBus))]
 public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDependency
 {
-    private readonly ConcurrentDictionary<Type, List<IEventHandlerFactory>> _handlerFactories;
-
     protected AbpEasyNetQEventBusOptions AbpEasyNetQEventBusOptions { get; }
     protected IEasyNetQSerializer Serializer { get; }
     protected ConcurrentDictionary<Type, List<IEventHandlerFactory>> HandlerFactories { get; }
@@ -60,6 +58,11 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
     {
         Bus = RabbitHutch.CreateBus(AbpEasyNetQEventBusOptions.Connection);
         SubscribeHandlers(AbpDistributedEventBusOptions.Handlers);
+    }
+
+    public void ShutDown()
+    {
+        Bus.Dispose();
     }
 
     public async override Task ProcessFromInboxAsync(
@@ -197,7 +200,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
     protected override IEnumerable<EventTypeWithEventHandlerFactories> GetHandlerFactories(Type eventType)
     {
-        return _handlerFactories
+        return HandlerFactories
             .Where(hf => ShouldTriggerEventForHandler(eventType, hf.Key))
             .Select(handlerFactory =>
                 new EventTypeWithEventHandlerFactories(handlerFactory.Key, handlerFactory.Value))

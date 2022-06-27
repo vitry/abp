@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.EventBus.Distributed;
 
@@ -6,18 +7,20 @@ namespace Volo.Abp.EventBus.EasyNetQ;
 
 public class MySimpleDistributedTransientEventHandler : IDistributedEventHandler<MySimpleEventData>, IDisposable
 {
-    public static int HandleCount { get; set; }
+    private static int _handleCount = 0;
+    public static int HandleCount => _handleCount;
 
-    public static int DisposeCount { get; set; }
+    private static int _disposeCount = 0;
+    public static int DisposeCount => _disposeCount;
 
-    public Task HandleEventAsync(MySimpleEventData eventData)
+    public async Task HandleEventAsync(MySimpleEventData eventData)
     {
-        ++HandleCount;
-        return Task.CompletedTask;
+        await Task.Delay(TimeSpan.FromMilliseconds(100));
+        Interlocked.Increment(ref _handleCount);
     }
 
     public void Dispose()
     {
-        ++DisposeCount;
+        Interlocked.Increment(ref _disposeCount);
     }
 }

@@ -11,7 +11,7 @@ public class AbpEventBusEasyNetQTestModule : AbpModule
         context.Services.Configure<AbpEasyNetQEventBusOptions>(opt =>
         {
             opt.ConsumerId = "test";
-            opt.Connection = "host=localhost";
+            opt.Connection = "host=localhost;prefetchcount=50";
         });
     }
 }

@@ -173,7 +173,8 @@ public class RabbitMqDistributedEventBus : DistributedEventBusBase, ISingletonDe
     /// <inheritdoc/>
     public override void Unsubscribe(Type eventType, IEventHandlerFactory factory)
     {
-        GetOrCreateHandlerFactories(eventType).Locking(factories => factories.Remove(factory));
+        GetOrCreateHandlerFactories(eventType)
+            .Locking(factories => factories.Remove(factory));
     }
 
     /// <inheritdoc/>
