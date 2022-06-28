@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities.Events.Distributed;
@@ -12,8 +13,6 @@ public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHa
 {
     private readonly ICurrentTenant _currentTenant;
    
-    public static TaskCompletionSource<bool> IsHandled { get; private set; } = new TaskCompletionSource<bool>();
-
     public MySimpleDistributedSingleInstanceEventHandler(ICurrentTenant currentTenant)
     {
         _currentTenant = currentTenant;
@@ -24,14 +23,12 @@ public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHa
     public Task HandleEventAsync(MySimpleEventData eventData)
     {
         TenantId = _currentTenant.Id;
-        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 
     public Task HandleEventAsync(EntityCreatedEto<MySimpleEventData> eventData)
     {
         TenantId = _currentTenant.Id;
-        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 
@@ -39,7 +36,6 @@ public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHa
     {
         var tenantIdString = eventData.Properties.GetOrDefault("TenantId").ToString();
         TenantId = tenantIdString != null ? new Guid(tenantIdString) : _currentTenant.Id;
-        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 }
