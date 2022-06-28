@@ -1,11 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Volo.Abp.DependencyInjection;
 using Volo.Abp.EventBus.Distributed;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
 
-public class MySimpleDistributedTransientEventHandler : IDistributedEventHandler<MySimpleEventData>, IDisposable
+public class MySimpleDistributedTransientEventHandler : IDistributedEventHandler<MySimpleEventData>, IDisposable, ITransientDependency
 {
     private static int _handleCount = 0;
     public static int HandleCount => _handleCount;

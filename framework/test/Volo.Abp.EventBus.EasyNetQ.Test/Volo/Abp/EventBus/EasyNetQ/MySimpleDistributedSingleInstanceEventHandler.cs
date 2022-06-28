@@ -11,6 +11,8 @@ namespace Volo.Abp.EventBus.EasyNetQ;
 public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHandler<MySimpleEventData>, IDistributedEventHandler<EntityCreatedEto<MySimpleEventData>>, IDistributedEventHandler<MySimpleEto>, ITransientDependency
 {
     private readonly ICurrentTenant _currentTenant;
+   
+    public static TaskCompletionSource<bool> IsHandled { get; private set; } = new TaskCompletionSource<bool>();
 
     public MySimpleDistributedSingleInstanceEventHandler(ICurrentTenant currentTenant)
     {
@@ -22,12 +24,14 @@ public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHa
     public Task HandleEventAsync(MySimpleEventData eventData)
     {
         TenantId = _currentTenant.Id;
+        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 
     public Task HandleEventAsync(EntityCreatedEto<MySimpleEventData> eventData)
     {
         TenantId = _currentTenant.Id;
+        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 
@@ -35,6 +39,7 @@ public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHa
     {
         var tenantIdString = eventData.Properties.GetOrDefault("TenantId").ToString();
         TenantId = tenantIdString != null ? new Guid(tenantIdString) : _currentTenant.Id;
+        IsHandled.SetResult(true);
         return Task.CompletedTask;
     }
 }

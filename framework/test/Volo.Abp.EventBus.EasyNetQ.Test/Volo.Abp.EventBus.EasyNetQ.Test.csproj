@@ -7,10 +7,6 @@
     <RootNamespace />
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Volo\Abp\EventBus\EasyNetQ\MySimpleDistributedSingleInstanceEventHandler.cs" />
-  </ItemGroup>
-
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Volo.Abp.Autofac\Volo.Abp.Autofac.csproj" />
 		<ProjectReference Include="..\..\src\Volo.Abp.Ddd.Domain\Volo.Abp.Ddd.Domain.csproj" />
