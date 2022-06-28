@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities.Events.Distributed;
@@ -12,7 +11,7 @@ namespace Volo.Abp.EventBus.EasyNetQ;
 public class MySimpleDistributedSingleInstanceEventHandler : IDistributedEventHandler<MySimpleEventData>, IDistributedEventHandler<EntityCreatedEto<MySimpleEventData>>, IDistributedEventHandler<MySimpleEto>, ITransientDependency
 {
     private readonly ICurrentTenant _currentTenant;
-   
+
     public MySimpleDistributedSingleInstanceEventHandler(ICurrentTenant currentTenant)
     {
         _currentTenant = currentTenant;
