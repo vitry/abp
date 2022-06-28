@@ -19,20 +19,16 @@ public class EasyNetQDistributedEventBus_Test : AbpEventBusEasyNetQTestBase
     [Fact]
     public async Task Should_Call_Handler_AndDispose()
     {
-        //DistributedEventBus.Subscribe<MySimpleEventData, MySimpleDistributedTransientEventHandler>();
+        DistributedEventBus.Subscribe<MySimpleEventData, MySimpleDistributedTransientEventHandler>();
 
-        int messageCount = 1;
+        int messageCount = 100;
         foreach (var data in Enumerable.Range(1, messageCount))
         {
             await DistributedEventBus.PublishAsync(new MySimpleEventData(data));
         }
 
-        //// wait when handled arrives max count;
-        //while (MySimpleDistributedTransientEventHandler.HandleCount < messageCount)
-        //{
-        //    await Task.Delay(TimeSpan.FromMilliseconds(100));
-        //}
-        await Task.Delay(1000*60);
+        // wait for handle
+        await Task.Delay(1000*20);
 
         int expected = messageCount;
         Assert.Equal(expected, MySimpleDistributedTransientEventHandler.HandleCount);
