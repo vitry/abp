@@ -29,8 +29,8 @@ public class BusPool : IBusPool, ISingletonDependency
             var lazyBus = LazyBuses.GetOrAdd(
                 busName, () => new Lazy<IBus>(() =>
                 {
-                    EasyNetQSetting bus = _options.Buses.GetOrDefault(busName);
-                    return RabbitHutch.CreateBus(bus.Connection);
+                    string connection = _options.Buses.GetOrDefault(busName);
+                    return RabbitHutch.CreateBus(connection);
                 })
                 );
             return lazyBus.Value;
@@ -40,13 +40,6 @@ public class BusPool : IBusPool, ISingletonDependency
             LazyBuses.TryRemove(busName, out _);
             throw;
         }
-    }
-
-    public string GetSubscriptionId(string busName = null)
-    {
-        busName ??= EasyNetQBuses.DefaultBusName;
-        EasyNetQSetting settings = _options.Buses.GetOrDefault(busName);
-        return Check.NotNull(settings, nameof(settings)).SubscriptionId;
     }
 
     public void Dispose()

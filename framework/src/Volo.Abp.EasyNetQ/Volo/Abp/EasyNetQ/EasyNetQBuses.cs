@@ -4,28 +4,21 @@ using System.Collections.Generic;
 namespace Volo.Abp.EasyNetQ;
 
 [Serializable]
-public class EasyNetQBuses : Dictionary<string, EasyNetQSetting>
+public class EasyNetQBuses : Dictionary<string, string>
 {
     public const string DefaultBusName = "Default";
 
-    public EasyNetQSetting Default {
+    public string Default {
         get => this[DefaultBusName];
         set => this[DefaultBusName] = Check.NotNull(value, nameof(value));
     }
 
-    public EasyNetQSetting GetOrDefault(string busName)
+    public string GetOrDefault(string busName)
     {
-        if (TryGetValue(busName, out var setting))
+        if (TryGetValue(busName, out var connection))
         {
-            return setting;
+            return connection;
         }
         return Default;
     }
-}
-
-public class EasyNetQSetting
-{
-    public string Connection { get; set; }
-
-    public string SubscriptionId { get; set; }
 }
