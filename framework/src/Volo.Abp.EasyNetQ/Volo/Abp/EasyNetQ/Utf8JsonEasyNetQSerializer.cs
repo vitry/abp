@@ -3,7 +3,7 @@ using System.Text;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Json;
 
-namespace Volo.Abp.EventBus.EasyNetQ;
+namespace Volo.Abp.EasyNetQ;
 
 public class Utf8JsonEasyNetQSerializer : IEasyNetQSerializer, ITransientDependency
 {
@@ -16,7 +16,7 @@ public class Utf8JsonEasyNetQSerializer : IEasyNetQSerializer, ITransientDepende
 
     public object Deserialize(byte[] value, Type type)
     {
-        return _jsonSerializer.Deserialize(type, Encoding.UTF8.GetString(value));   
+        return _jsonSerializer.Deserialize(type, Encoding.UTF8.GetString(value));
     }
 
     public T Deserialize<T>(byte[] value)

@@ -1,8 +1,11 @@
-﻿namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
+﻿namespace Volo.Abp.EasyNetQ;
 
 public class AbpEasyNetQOptions
 {
-    public string Connection { get; set; }
+    public AbpEasyNetQOptions()
+    {
+        Buses = new EasyNetQBuses();
+    }
 
-    public string ConsumerId { get; set; }
+    public EasyNetQBuses Buses { get; set; }
 }

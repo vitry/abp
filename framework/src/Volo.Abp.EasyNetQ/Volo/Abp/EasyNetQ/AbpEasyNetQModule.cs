@@ -1,6 +1,5 @@
 ﻿using EasyNetQ;
 using Microsoft.Extensions.DependencyInjection;
-using Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EasyNetQ;
@@ -15,6 +14,7 @@ public class AbpEasyNetQModule : AbpModule
 
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
+        // todo-kai: use bus pool dispose
         context.ServiceProvider.GetRequiredService<IBus>().Dispose();
     }
 }
