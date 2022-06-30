@@ -5,7 +5,8 @@ using Volo.Abp.Modularity;
 namespace Volo.Abp.EventBus.EasyNetQ;
 
 [DependsOn(
-    typeof(AbpEventBusModule)
+    typeof(AbpEventBusModule),
+    typeof(AbpEasyNetQModule)
     )]
 public class AbpEventBusEasyNetQModule : AbpModule
 {

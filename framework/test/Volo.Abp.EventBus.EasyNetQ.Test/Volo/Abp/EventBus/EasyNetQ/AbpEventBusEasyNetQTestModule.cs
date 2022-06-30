@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Volo.Abp.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
@@ -8,10 +9,15 @@ public class AbpEventBusEasyNetQTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.Configure<AbpEasyNetQOptions>(opt =>
+        {
+            opt.Buses = new EasyNetQBuses();
+            opt.Buses.Default = "host=localhost;prefetchcount=50";
+        });
         context.Services.Configure<AbpEasyNetQEventBusOptions>(opt =>
         {
-            opt.ConsumerId = "test";
-            opt.Connection = "host=localhost;prefetchcount=50";
+            opt.BusName = "Default";
+            opt.SubscriptionId = "test";
         });
     }
 }
