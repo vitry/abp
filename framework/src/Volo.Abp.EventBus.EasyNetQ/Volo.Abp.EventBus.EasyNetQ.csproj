@@ -15,6 +15,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Volo\Abp\EventBus\EasyNetQ\EasyNetQConst.cs" />
+    <Compile Remove="Volo\Abp\EventBus\EasyNetQ\IEasyNetQSerializer.cs" />
+    <Compile Remove="Volo\Abp\EventBus\EasyNetQ\NonGenericPubSubExtensions.cs" />
+    <Compile Remove="Volo\Abp\EventBus\EasyNetQ\Utf8JsonEasyNetQSerializer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Volo.Abp.EasyNetQ\Volo.Abp.EasyNetQ.csproj" />
     <ProjectReference Include="..\Volo.Abp.EventBus\Volo.Abp.EventBus.csproj" />
   </ItemGroup>

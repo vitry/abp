@@ -2,7 +2,7 @@
 
 public class AbpEasyNetQEventBusOptions
 {
-    public string Connection { get; set; }
+    public string BusName { get; set; }
 
-    public string ConsumerId { get; set; }
+    public string SubscriptionId { get; set; }
 }

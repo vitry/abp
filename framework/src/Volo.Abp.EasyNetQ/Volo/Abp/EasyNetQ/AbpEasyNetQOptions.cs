@@ -13,8 +13,6 @@ public class AbpEasyNetQOptions
 
     public EasyNetQBuses Buses { get; set; }
 
-    public string SubscriptionId { get; set; }
-
     public Dictionary<string, SubscribeConfiguration> EventTypeNameSubscribeConfigurations { get; set; }
 
     public Dictionary<string, PublishConfiguration> EventTypeNamePublishConfigurations { get; set; }

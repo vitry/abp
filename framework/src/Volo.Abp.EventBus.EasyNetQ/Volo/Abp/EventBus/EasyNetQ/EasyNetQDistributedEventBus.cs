@@ -14,7 +14,6 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.Threading;
 using Volo.Abp.Timing;
 using Volo.Abp.Uow;
-using static Volo.Abp.EventBus.EasyNetQ.EasyNetQConst;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
 
@@ -23,18 +22,22 @@ namespace Volo.Abp.EventBus.EasyNetQ;
 public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDependency
 {
     protected AbpEasyNetQEventBusOptions AbpEasyNetQEventBusOptions { get; }
+    protected IBusPool BusPool { get; }
     protected IEasyNetQSerializer Serializer { get; }
+    public AbpEasyNetQOptions AbpEasyNetQOptions { get; }
     protected ConcurrentDictionary<Type, List<IEventHandlerFactory>> HandlerFactories { get; }
     protected ConcurrentDictionary<string, Type> EventTypes { get; }
     protected IBus Bus { get; private set; }
 
     public EasyNetQDistributedEventBus(
         IOptions<AbpEasyNetQEventBusOptions> options,
+        IBusPool busPool,
         IEasyNetQSerializer serializer,
         IServiceScopeFactory serviceScopeFactory,
         ICurrentTenant currentTenant,
         IUnitOfWorkManager unitOfWorkManager,
         IOptions<AbpDistributedEventBusOptions> abpDistributedEventBusOptions,
+        IOptions<AbpEasyNetQOptions> abpEasyNetQOptions,
         IGuidGenerator guidGenerator,
         IClock clock,
         IEventHandlerInvoker eventHandlerInvoker)
@@ -48,21 +51,22 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
             eventHandlerInvoker)
     {
         AbpEasyNetQEventBusOptions = options.Value;
+        BusPool = busPool;
         Serializer = serializer;
-
+        AbpEasyNetQOptions = abpEasyNetQOptions.Value;
         HandlerFactories = new ConcurrentDictionary<Type, List<IEventHandlerFactory>>();
         EventTypes = new ConcurrentDictionary<string, Type>();
     }
 
     public void Initialize()
     {
-        Bus = RabbitHutch.CreateBus(AbpEasyNetQEventBusOptions.Connection);
+        Bus = BusPool.Get(AbpEasyNetQEventBusOptions.BusName);
         SubscribeHandlers(AbpDistributedEventBusOptions.Handlers);
     }
 
     public void ShutDown()
     {
-        Bus.Dispose();
+        BusPool.Dispose();
     }
 
     public async override Task ProcessFromInboxAsync(
@@ -90,9 +94,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         var eventType = EventTypes.GetOrDefault(eventName);
         var @event = Serializer.Deserialize(eventData, eventType);
 
-        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Priority, out var priority);
-        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Topic, out var topic);
-        outgoingEvent.ExtraProperties.TryGetValue(PublishConfigurations.Expires, out var expire);
+        outgoingEvent.ExtraProperties.TryGetValue(EasyNetQConst.PublishConfigurations.Priority, out var priority);
+        outgoingEvent.ExtraProperties.TryGetValue(EasyNetQConst.PublishConfigurations.Topic, out var topic);
+        outgoingEvent.ExtraProperties.TryGetValue(EasyNetQConst.PublishConfigurations.Expires, out var expire);
 
         await PublishAsync(eventType, @event, (byte?)priority, (string)topic, (int?)expire);
     }
@@ -127,7 +131,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
         handlerFactories.Add(factory);
 
-        var subscribe = Bus.PubSub.SubscribeAsync(AbpEasyNetQEventBusOptions.ConsumerId, eventType,
+        var subscribe = Bus.PubSub.SubscribeAsync(AbpEasyNetQEventBusOptions.SubscriptionId, eventType,
             (obj, type, cancelToken) =>
             {
                 // todo-kai: pipeline handle if required;
