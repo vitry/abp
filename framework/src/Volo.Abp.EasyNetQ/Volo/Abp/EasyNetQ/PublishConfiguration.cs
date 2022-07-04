@@ -15,12 +15,9 @@ public class PublishConfiguration
 
     public int? Expires { get; set; }
 
-    public Action<IPublishConfiguration> PublishWith()
+    public void Specify(IPublishConfiguration config)
     {
-        return config =>
-        {
-            if (!Topic.IsNullOrEmpty()) config.WithTopic(Topic);
-            if (Expires.HasValue) config.WithExpires(Expires.Value);
-        };
+        if (!Topic.IsNullOrEmpty()) config.WithTopic(Topic);
+        if (Expires.HasValue) config.WithExpires(Expires.Value);
     }
 }

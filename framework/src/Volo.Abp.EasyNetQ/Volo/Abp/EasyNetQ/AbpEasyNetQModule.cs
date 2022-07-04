@@ -14,7 +14,6 @@ public class AbpEasyNetQModule : AbpModule
 
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
-        // todo-kai: use bus pool dispose
-        //context.ServiceProvider.GetRequiredService<IBus>().Dispose();
+        context.ServiceProvider.GetRequiredService<IBusPool>().Dispose();
     }
 }

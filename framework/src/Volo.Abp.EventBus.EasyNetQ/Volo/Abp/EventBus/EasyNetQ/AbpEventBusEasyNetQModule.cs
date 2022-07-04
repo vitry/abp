@@ -24,12 +24,4 @@ public class AbpEventBusEasyNetQModule : AbpModule
             .GetRequiredService<EasyNetQDistributedEventBus>()
             .Initialize();
     }
-
-    public override void OnApplicationShutdown(ApplicationShutdownContext context)
-    {
-        context
-            .ServiceProvider
-            .GetRequiredService<EasyNetQDistributedEventBus>()
-            .ShutDown();
-    }
 }

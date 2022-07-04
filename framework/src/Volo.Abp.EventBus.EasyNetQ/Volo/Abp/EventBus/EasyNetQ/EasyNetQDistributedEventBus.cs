@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EasyNetQ;
+using Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Guids;
 using Volo.Abp.MultiTenancy;
@@ -24,10 +25,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
     protected AbpEasyNetQEventBusOptions AbpEasyNetQEventBusOptions { get; }
     protected IBusPool BusPool { get; }
     protected IEasyNetQSerializer Serializer { get; }
-    public AbpEasyNetQOptions AbpEasyNetQOptions { get; }
     protected ConcurrentDictionary<Type, List<IEventHandlerFactory>> HandlerFactories { get; }
     protected ConcurrentDictionary<string, Type> EventTypes { get; }
-    protected IBus Bus { get; private set; }
+    protected IEasyNetQSubscriber Subscriber { get; }
 
     public EasyNetQDistributedEventBus(
         IOptions<AbpEasyNetQEventBusOptions> options,
@@ -37,7 +37,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         ICurrentTenant currentTenant,
         IUnitOfWorkManager unitOfWorkManager,
         IOptions<AbpDistributedEventBusOptions> abpDistributedEventBusOptions,
-        IOptions<AbpEasyNetQOptions> abpEasyNetQOptions,
+        IEasyNetQSubscriber subscriber,
         IGuidGenerator guidGenerator,
         IClock clock,
         IEventHandlerInvoker eventHandlerInvoker)
@@ -53,20 +53,35 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         AbpEasyNetQEventBusOptions = options.Value;
         BusPool = busPool;
         Serializer = serializer;
-        AbpEasyNetQOptions = abpEasyNetQOptions.Value;
+        Subscriber = subscriber;
         HandlerFactories = new ConcurrentDictionary<Type, List<IEventHandlerFactory>>();
         EventTypes = new ConcurrentDictionary<string, Type>();
     }
 
     public void Initialize()
     {
-        Bus = BusPool.Get(AbpEasyNetQEventBusOptions.BusName);
+        Subscriber.Initialize(AbpEasyNetQEventBusOptions.SubscriptionId, AbpEasyNetQEventBusOptions.BusName);
+        Subscriber.OnMessageReceived(ProcessEventAsync);
         SubscribeHandlers(AbpDistributedEventBusOptions.Handlers);
     }
 
-    public void ShutDown()
+    private async Task ProcessEventAsync(object eventData, string eventName)
     {
-        BusPool.Dispose();
+        var eventType = EventTypes.GetOrDefault(eventName);
+        if (eventType == null)
+        {
+            return;
+        }
+
+        var eventBytes = Serializer.Serialize(eventData);
+
+        // miss messageid
+        if (await AddToInboxAsync("", eventName, eventType, eventBytes))
+        {
+            return;
+        }
+
+        await TriggerHandlersAsync(eventType, eventData);
     }
 
     public async override Task ProcessFromInboxAsync(
@@ -105,7 +120,8 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         Type eventType, object eventData,
         byte? priority, string topic, int? expire)
     {
-        await Bus.PubSub.PublishAsync(eventData, eventType, config =>
+        var bus = BusPool.Get(AbpEasyNetQEventBusOptions.BusName);
+        await bus.PubSub.PublishAsync(eventData, eventType, config =>
         {
             if (priority.HasValue) config.WithPriority(priority.Value);
             if (!topic.IsNullOrEmpty()) config.WithTopic(topic);
@@ -131,16 +147,10 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
         handlerFactories.Add(factory);
 
-        var subscribe = Bus.PubSub.SubscribeAsync(AbpEasyNetQEventBusOptions.SubscriptionId, eventType,
-            (obj, type, cancelToken) =>
-            {
-                // todo-kai: pipeline handle if required;
-                return TriggerHandlersAsync(eventType, obj);
-            },
-            config =>
-            {
-                /* todo-kai: config subscribe if required */
-            });
+        if (HandlerFactories.Count == 1)
+        {
+            Subscriber.SubscribeAsync(eventType);
+        }
 
         return new EventHandlerFactoryUnregistrar(this, eventType, factory);
     }
