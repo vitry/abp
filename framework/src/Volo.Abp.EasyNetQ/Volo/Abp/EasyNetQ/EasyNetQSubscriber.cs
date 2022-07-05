@@ -17,7 +17,6 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
 {
     private readonly ILogger<EasyNetQSubscriber> _logger;
     private readonly AbpEasyNetQOptions _options;
-    private IBus _bus;
 
     public EasyNetQSubscriber(
         IBusPool busPool,
@@ -32,6 +31,8 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
         _options = options.Value;
         _logger = logger;
 
+        SubscribeCommandQueue = new BlockingCollection<QueueSubscribeCommand>();
+        Subscriptions = new ConcurrentDictionary<Type, ISubscriptionResult>();
         Callbacks = new ConcurrentBag<Func<object, string, Task>>();
 
         Timer.Period = 5000;
@@ -40,14 +41,17 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
     }
 
     protected IBusPool BusPool { get; }
+    protected IBus Bus { get; private set; }
     protected AbpAsyncTimer Timer { get; }
     protected IExceptionNotifier ExceptionNotifier { get; }
     protected string BusName { get; private set; }
     protected ConcurrentBag<Func<object, string, Task>> Callbacks { get; }
+    protected BlockingCollection<QueueSubscribeCommand> SubscribeCommandQueue { get; }
+    protected ConcurrentDictionary<Type, ISubscriptionResult> Subscriptions { get; private set; }
 
     public string SubscriptionId { get; private set; }
 
-    public void Initialize([NotNull]string subscriptionId, string busName = null)
+    public void Initialize([NotNull] string subscriptionId, string busName = null)
     {
         Check.NotNullOrEmpty(subscriptionId, nameof(subscriptionId));
         SubscriptionId = subscriptionId;
@@ -60,17 +64,49 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
         Callbacks.Add(callback);
     }
 
-    public async Task SubscribeAsync(Type eventType)
+    public Task SubscribeAsync(Type eventType)
     {
-        var subscribe = await _bus.PubSub.SubscribeAsync(SubscriptionId, eventType,
-            (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
-            config => _options.GetSubscribeConfiguration(eventType).Specify(config)
-        );
+        SubscribeCommandQueue.TryAdd(new QueueSubscribeCommand(QueueSubscribeType.Subscribe, eventType));
+        return Task.CompletedTask;
     }
 
     public Task UnSubscribeAsync(Type eventType)
     {
-        throw new NotImplementedException();
+        SubscribeCommandQueue.TryAdd(new QueueSubscribeCommand(QueueSubscribeType.Unsubscribe, eventType));
+        return Task.CompletedTask;
+    }
+
+    protected virtual async Task StartSendQueueSubscribeCommandsAsync()
+    {
+        try
+        {
+            while (SubscribeCommandQueue.TryTake(out var command))
+            {
+                switch (command.Type)
+                {
+                    case QueueSubscribeType.Subscribe:
+                        var subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId, command.EventType,
+                            (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
+                            config => _options.GetSubscribeConfiguration(command.EventType)?.Specify(config)
+                        );
+                        Subscriptions.TryAdd(command.EventType, subscription);
+                        break;
+                    case QueueSubscribeType.Unsubscribe:
+                        if (Subscriptions.TryGetValue(command.EventType, out subscription))
+                        {
+                            subscription.Dispose();
+                        }
+                        break; 
+                    default:
+                        throw new AbpException($"Unknown {nameof(QueueSubscribeType)}: {command.Type}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogException(ex, LogLevel.Warning);
+            await ExceptionNotifier.NotifyAsync(ex, logLevel: LogLevel.Warning);
+        }
     }
 
     protected virtual async Task HandleIncomingMessageAsync(object eventData, Type eventType, CancellationToken cancellationToken)
@@ -102,9 +138,10 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
 
     protected virtual async Task Timer_Elapsed(AbpAsyncTimer timer)
     {
-        if (_bus == null)
+        if (Bus == null)
         {
             await CreateBusAsync();
+            await StartSendQueueSubscribeCommandsAsync();
         }
     }
 
@@ -113,7 +150,7 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
         await DisposeBusAsync();
         try
         {
-            _bus = BusPool.Get(BusName);
+            Bus = BusPool.Get(BusName);
         }
         catch (Exception ex)
         {
@@ -121,13 +158,14 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
             await ExceptionNotifier.NotifyAsync(ex, logLevel: LogLevel.Error);
         }
     }
-    
+
     protected virtual async Task DisposeBusAsync()
     {
-        if (_bus == null) return;
+        if (Bus == null) return;
+
         try
         {
-            _bus.Dispose();
+            Bus.Dispose();
         }
         catch (Exception ex)
         {
@@ -140,5 +178,24 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
     {
         Timer.Stop();
         AsyncHelper.RunSync(() => DisposeBusAsync());
+    }
+
+    protected class QueueSubscribeCommand
+    {
+        public QueueSubscribeType Type { get; }
+
+        public Type EventType { get; }
+
+        public QueueSubscribeCommand(QueueSubscribeType type, Type eventType)
+        {
+            Type = type;
+            EventType = eventType;
+        }
+    }
+
+    protected enum QueueSubscribeType
+    {
+        Subscribe,
+        Unsubscribe
     }
 }

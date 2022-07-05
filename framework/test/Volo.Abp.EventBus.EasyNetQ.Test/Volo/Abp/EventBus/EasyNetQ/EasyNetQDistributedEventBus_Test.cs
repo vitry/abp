@@ -19,7 +19,7 @@ public class EasyNetQDistributedEventBus_Test : AbpEventBusEasyNetQTestBase
     [Fact]
     public async Task Should_Call_Handler_AndDispose()
     {
-        int messageCount = 10;
+        int messageCount = 100;
         foreach (var data in Enumerable.Range(1, messageCount))
         {
             await DistributedEventBus.PublishAsync(new MySimpleEventData(data));

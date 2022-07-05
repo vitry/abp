@@ -9,6 +9,8 @@ public class AbpEasyNetQOptions
     public AbpEasyNetQOptions()
     {
         Buses = new EasyNetQBuses();
+        EventTypeNamePublishConfigurations = new Dictionary<string, PublishConfiguration>();
+        EventTypeNameSubscribeConfigurations = new Dictionary<string, SubscribeConfiguration>();
     }
 
     public EasyNetQBuses Buses { get; set; }
