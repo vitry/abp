@@ -1,8 +1,5 @@
-﻿using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Volo.Abp.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
