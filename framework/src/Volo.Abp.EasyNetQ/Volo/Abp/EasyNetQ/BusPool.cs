@@ -30,7 +30,9 @@ public class BusPool : IBusPool, ISingletonDependency
                 busName, () => new Lazy<IBus>(() =>
                 {
                     string connection = _options.Buses.GetOrDefault(busName);
-                    return RabbitHutch.CreateBus(connection);
+                    return RabbitHutch.CreateBus(connection,
+                        services => services.Register<IConventions>(
+                            c => new ExchangeNameConfigurableConventions(c.Resolve<ITypeNameSerializer>(), _options)));
                 })
                 );
             return lazyBus.Value;
