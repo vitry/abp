@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EasyNetQ;
+using EasyNetQ.Topology;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,26 +15,28 @@ using Volo.Abp.Threading;
 
 namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
-public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/ IDisposable
+public class RawEasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDisposable
 {
     private readonly ILogger<EasyNetQSubscriber> _logger;
     private readonly AbpEasyNetQOptions _options;
 
-    public EasyNetQSubscriber(
+    public RawEasyNetQSubscriber(
         IBusPool busPool,
         IOptions<AbpEasyNetQOptions> options,
         AbpAsyncTimer timer,
+        IEasyNetQSerializer serializer,
         IExceptionNotifier exceptionNotifier,
         ILogger<EasyNetQSubscriber> logger)
     {
         BusPool = busPool;
         Timer = timer;
+        Serializer = serializer;
         ExceptionNotifier = exceptionNotifier;
         _options = options.Value;
         _logger = logger;
 
         SubscribeCommandQueue = new BlockingCollection<QueueSubscribeCommand>();
-        Subscriptions = new ConcurrentDictionary<Type, ISubscriptionResult>();
+        Subscriptions = new ConcurrentDictionary<Type, IDisposable>();
         Callbacks = new ConcurrentBag<Func<object, string, Task>>();
 
         Timer.Period = 5000;
@@ -43,11 +47,12 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
     protected IBusPool BusPool { get; }
     protected IBus Bus { get; private set; }
     protected AbpAsyncTimer Timer { get; }
+    public IEasyNetQSerializer Serializer { get; }
     protected IExceptionNotifier ExceptionNotifier { get; }
     protected string BusName { get; private set; }
     protected ConcurrentBag<Func<object, string, Task>> Callbacks { get; }
     protected BlockingCollection<QueueSubscribeCommand> SubscribeCommandQueue { get; }
-    protected ConcurrentDictionary<Type, ISubscriptionResult> Subscriptions { get; private set; }
+    protected ConcurrentDictionary<Type, IDisposable> Subscriptions { get; private set; }
 
     public string SubscriptionId { get; private set; }
 
@@ -85,10 +90,12 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
                 switch (command.Type)
                 {
                     case QueueSubscribeType.Subscribe:
-                        var subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId, command.EventType,
-                            (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
-                            config => _options.GetSubscribeConfiguration(command.EventType)?.Specify(config)
-                        );
+                        var exchage = Bus.Advanced.ExchangeDeclare("MySimpleExchange2", ExchangeType.Topic);
+                        var queue = Bus.Advanced.QueueDeclare($"{command.EventType.FullName}+{SubscriptionId}");
+                        var binding = Bus.Advanced.Bind(exchage, queue, "#");
+                        var subscription = Bus.Advanced.Consume(queue, 
+                            (body, _, _) => HandleIncomingMessageAsync(body, command.EventType),
+                            config => { });                       
                         Subscriptions.TryAdd(command.EventType, subscription);
                         break;
                     case QueueSubscribeType.Unsubscribe:
@@ -107,6 +114,12 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
             _logger.LogException(ex, LogLevel.Warning);
             await ExceptionNotifier.NotifyAsync(ex, logLevel: LogLevel.Warning);
         }
+    }
+
+    protected virtual async Task HandleIncomingMessageAsync(byte[] body, Type eventType)
+    {
+        var @event = Serializer.Deserialize(body, eventType);
+        await HandleIncomingMessageAsync(@event, eventType, default);
     }
 
     protected virtual async Task HandleIncomingMessageAsync(object eventData, Type eventType, CancellationToken cancellationToken)
@@ -197,5 +210,49 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
     {
         Subscribe,
         Unsubscribe
+    }
+
+    private static string RemoveAssemblyDetails(string fullyQualifiedTypeName)
+    {
+        var builder = new StringBuilder(fullyQualifiedTypeName.Length);
+
+        // loop through the type name and filter out qualified assembly details from nested type names
+        var writingAssemblyName = false;
+        var skippingAssemblyDetails = false;
+        foreach (var character in fullyQualifiedTypeName)
+        {
+            switch (character)
+            {
+                case '[':
+                    writingAssemblyName = false;
+                    skippingAssemblyDetails = false;
+                    builder.Append(character);
+                    break;
+                case ']':
+                    writingAssemblyName = false;
+                    skippingAssemblyDetails = false;
+                    builder.Append(character);
+                    break;
+                case ',':
+                    if (!writingAssemblyName)
+                    {
+                        writingAssemblyName = true;
+                        builder.Append(character);
+                    }
+                    else
+                    {
+                        skippingAssemblyDetails = true;
+                    }
+                    break;
+                default:
+                    if (!skippingAssemblyDetails)
+                    {
+                        builder.Append(character);
+                    }
+                    break;
+            }
+        }
+
+        return builder.ToString();
     }
 }
