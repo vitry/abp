@@ -13,7 +13,7 @@ using Volo.Abp.Threading;
 
 namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
-public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/ IDisposable
+public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDisposable
 {
     private readonly ILogger<EasyNetQSubscriber> _logger;
     private readonly AbpEasyNetQOptions _options;
@@ -22,17 +22,19 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
         IBusPool busPool,
         IOptions<AbpEasyNetQOptions> options,
         AbpAsyncTimer timer,
+        IEasyNetQSerializer serializer,
         IExceptionNotifier exceptionNotifier,
         ILogger<EasyNetQSubscriber> logger)
     {
         BusPool = busPool;
         Timer = timer;
+        Serializer = serializer;
         ExceptionNotifier = exceptionNotifier;
         _options = options.Value;
         _logger = logger;
 
         SubscribeCommandQueue = new BlockingCollection<QueueSubscribeCommand>();
-        Subscriptions = new ConcurrentDictionary<Type, ISubscriptionResult>();
+        Subscriptions = new ConcurrentDictionary<Type, IDisposable>();
         Callbacks = new ConcurrentBag<Func<object, string, Task>>();
 
         Timer.Period = 5000;
@@ -43,11 +45,12 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
     protected IBusPool BusPool { get; }
     protected IBus Bus { get; private set; }
     protected AbpAsyncTimer Timer { get; }
+    protected IEasyNetQSerializer Serializer { get; }
     protected IExceptionNotifier ExceptionNotifier { get; }
     protected string BusName { get; private set; }
     protected ConcurrentBag<Func<object, string, Task>> Callbacks { get; }
     protected BlockingCollection<QueueSubscribeCommand> SubscribeCommandQueue { get; }
-    protected ConcurrentDictionary<Type, ISubscriptionResult> Subscriptions { get; private set; }
+    protected ConcurrentDictionary<Type, IDisposable> Subscriptions { get; private set; }
 
     public string SubscriptionId { get; private set; }
 
@@ -85,18 +88,34 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
                 switch (command.Type)
                 {
                     case QueueSubscribeType.Subscribe:
-                        var subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId, command.EventType,
-                            (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
-                            config => _options.GetSubscribeConfiguration(command.EventType)?.Specify(config)
-                        );
+                        IDisposable subscription = null;
+                        ConsumerConfiguration config = _options.GetConsumerConfiguration(command.EventType);
+                        if (config != null)
+                        {
+                            var exchage = Bus.Advanced.ExchangeDeclare(config.ExchangeName, config.ExchangeType);
+                            var queue = Bus.Advanced.QueueDeclare(config.QueueName);
+                            var binding = Bus.Advanced.Bind(exchage, queue, config.RoutingKey);
+                            subscription = Bus.Advanced.Consume(queue,
+                                (body, _, _, cancelToken) => HandleIncomingMessageAsync(body, command.EventType, cancelToken),
+                                c => config.Specify(c));
+                        }
+                        else
+                        {
+                            subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId, command.EventType,
+                                (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
+                                c => _options.GetSubscribeConfiguration(command.EventType)?.Specify(c)
+                            );
+                        }
                         Subscriptions.TryAdd(command.EventType, subscription);
                         break;
+
                     case QueueSubscribeType.Unsubscribe:
                         if (Subscriptions.TryGetValue(command.EventType, out subscription))
                         {
                             subscription.Dispose();
                         }
-                        break; 
+                        break;
+
                     default:
                         throw new AbpException($"Unknown {nameof(QueueSubscribeType)}: {command.Type}");
                 }
@@ -107,6 +126,12 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, /*ISingletonDependency,*/
             _logger.LogException(ex, LogLevel.Warning);
             await ExceptionNotifier.NotifyAsync(ex, logLevel: LogLevel.Warning);
         }
+    }
+
+    protected virtual async Task HandleIncomingMessageAsync(byte[] body, Type eventType, CancellationToken cancellationToken)
+    {
+        var @event = Serializer.Deserialize(body, eventType);
+        await HandleIncomingMessageAsync(@event, eventType, cancellationToken);
     }
 
     protected virtual async Task HandleIncomingMessageAsync(object eventData, Type eventType, CancellationToken cancellationToken)

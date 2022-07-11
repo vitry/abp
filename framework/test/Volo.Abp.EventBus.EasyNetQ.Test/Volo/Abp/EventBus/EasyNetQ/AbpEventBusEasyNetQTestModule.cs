@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using EasyNetQ;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Volo.Abp.EasyNetQ;
 using Volo.Abp.Modularity;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
@@ -28,5 +30,7 @@ public class AbpEventBusEasyNetQTestModule : AbpModule
         //    opt.BusName = "Dev";
         //    opt.SubscriptionId = "test";
         //});
+
+        context.Services.Configure<AbpEasyNetQOptions>(opt => opt.RegisterBus(x => x.EnableLegacyConventions()));
     }
 }

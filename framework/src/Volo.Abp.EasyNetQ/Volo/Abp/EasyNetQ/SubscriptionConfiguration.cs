@@ -3,13 +3,12 @@ using EasyNetQ;
 
 namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
-public class SubscribeConfiguration
+public class SubscriptionConfiguration
 {
     public IList<string> Topics { get; set; }
     public ushort? PrefetchCount { get; set; }
     public int? Expires { get; set; }
     public string QueueName { get; set; }
-    public string ExchangeName { get; set; }
 
     public void Specify(ISubscriptionConfiguration config)
     {
@@ -24,9 +23,5 @@ public class SubscribeConfiguration
             config.WithExpires(Expires.Value);
         if (!string.IsNullOrEmpty(QueueName))
             config.WithQueueName(QueueName);
-        if (!string.IsNullOrEmpty(ExchangeName))
-        {
-
-        }
     }
 }
