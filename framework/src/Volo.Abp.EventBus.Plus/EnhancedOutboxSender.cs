@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.DistributedLocking;
 using Volo.Abp.EventBus.Boxes;
@@ -33,13 +32,24 @@ public class EnhancedOutboxSender : OutboxSender, IOutboxSender, ITransientDepen
             try
             {
                 await DistributedEventBus.AsSupportsEventBoxes().PublishFromOutboxAsync(waitingEvent, OutboxConfig);
+                waitingEvent.FinishHandle();
             }
             catch (Exception ex)
             {
-                waitingEvent.SetProperty("exception", ex);
-                waitingEvent.SetProperty("next-retry-time", DateTime.Now.AddMinutes(1));
+                // todo-kai: set retry timing.
+                (int retryMaxCount, TimeSpan[] failRetryIntervals) retryConfig = (10, new[] { TimeSpan.FromMinutes(1) });
+                waitingEvent.RecordException(ex);
+
+                // dead letter wouldn't try again.
+                if (!waitingEvent.TryScheduleRetryLater(retryConfig))
+                {
+                    return;
+                }
+            }
+            finally
+            {
+                // update event publish info and publish changed log.
                 await Outbox.EnqueueAsync(waitingEvent);
-                return;
             }
 
             await Outbox.DeleteAsync(waitingEvent.Id);
@@ -49,7 +59,6 @@ public class EnhancedOutboxSender : OutboxSender, IOutboxSender, ITransientDepen
 
     protected override Task PublishOutgoingMessagesInBatchAsync(List<OutgoingEventInfo> waitingEvents)
     {
-        // todo-kai-refactor: in batch handle.
-        return base.PublishOutgoingMessagesInBatchAsync(waitingEvents);
+        throw new NotImplementedException();
     }
 }
