@@ -6,13 +6,12 @@ namespace Volo.Abp.EventBus.Plus;
 
 public static class OutgoingEventInfoExtensions
 {
-    public static void HandleOnSchedule(this OutgoingEventInfo outgoingEventInfo)
-    {
-        outgoingEventInfo.SetStatus(EventInfoStatusConst.Scheduled);
-    }
-
     public static void RecordException(this OutgoingEventInfo outgoingEventInfo, Exception exception)
     {
+        if (outgoingEventInfo.IsFailureRetrying())
+        {
+            outgoingEventInfo.AddRetryCount();
+        }
         outgoingEventInfo.SetStatus(EventInfoStatusConst.Failed);
         outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Exception, exception);
     }
@@ -25,13 +24,27 @@ public static class OutgoingEventInfoExtensions
         {
             return false;
         }
-
         outgoingEventInfo.NextRetryOn(ScheduleNextRetryTime(retriedTimes, retryConfig.failRetryIntervals));
         return true;
     }
 
+    public static bool IsFailureRetrying(this OutgoingEventInfo outgoingEventInfo)
+    {
+        return outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.NextRetryTime) != null;
+    }
+
+    public static void AddRetryCount(this OutgoingEventInfo outgoingEventInfo)
+    {
+        int currentRetries = (int)outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.Retries);
+        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Retries, currentRetries + 1);
+    }
+
     public static void FinishHandle(this OutgoingEventInfo outgoingEventInfo)
     {
+        if (outgoingEventInfo.IsFailureRetrying())
+        {
+            outgoingEventInfo.AddRetryCount();
+        }
         outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Status, EventInfoStatusConst.Succeed);
     }
 
@@ -49,8 +62,8 @@ public static class OutgoingEventInfoExtensions
 
     private static DateTime ScheduleNextRetryTime(int retryCount, TimeSpan[] failRetryIntervals)
     {
-        int intervalIndex = 
-            retryCount > failRetryIntervals.Length - 1 
+        int intervalIndex =
+            retryCount > failRetryIntervals.Length - 1
             ? failRetryIntervals.Length : retryCount;
 
         TimeSpan interval = failRetryIntervals[intervalIndex];

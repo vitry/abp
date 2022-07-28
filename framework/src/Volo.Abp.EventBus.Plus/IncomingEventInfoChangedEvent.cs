@@ -1,9 +1,17 @@
-﻿namespace Volo.Abp.EventBus.Plus;
+﻿using Volo.Abp.EventBus.Distributed;
+
+namespace Volo.Abp.EventBus.Plus;
 
 public class IncomingEventInfoChangedEvent
 {
-    public IncomingEventInfoChangedEvent()
+    public IncomingEventInfoChangedEvent(IncomingEventInfo incomingEvent)
     {
-
     }
+
+    public string EventId { get; private set; }
+    public string EventName { get; private set; }
+    public string BusProvider { get; private set; }
+    public string ProviderInfo { get; private set; }
+    public string EventData { get; private set; }
+    public string LogInfo { get; private set; }
 }

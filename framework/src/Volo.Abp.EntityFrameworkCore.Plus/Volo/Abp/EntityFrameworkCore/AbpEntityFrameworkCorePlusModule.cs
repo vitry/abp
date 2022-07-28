@@ -20,5 +20,7 @@ public class AbpEntityFrameworkCorePlusModule : AbpModule
 
         context.Services.Replace(ServiceDescriptor.Transient(typeof(ISqlRawDbContextEventOutbox<>), typeof(SqlRawDbContextEventEnhancedOutbox<>)));
         context.Services.Replace(ServiceDescriptor.Transient(typeof(ISqlRawDbContextEventInbox<>), typeof(SqlRawDbContextEventEnhancedInbox<>)));
+
+        // must exclude event 'OutgoingEventInfoChangedEvent'
     }
 }

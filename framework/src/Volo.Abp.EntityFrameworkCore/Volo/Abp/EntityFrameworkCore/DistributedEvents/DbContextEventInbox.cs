@@ -22,7 +22,7 @@ public class DbContextEventInbox<TDbContext> : IDbContextEventInbox<TDbContext>
     public DbContextEventInbox(
         IDbContextProvider<TDbContext> dbContextProvider,
         IClock clock,
-       IOptions<AbpEventBusBoxesOptions> eventBusBoxesOptions)
+        IOptions<AbpEventBusBoxesOptions> eventBusBoxesOptions)
     {
         DbContextProvider = dbContextProvider;
         Clock = clock;
