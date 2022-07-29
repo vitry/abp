@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Volo.Abp.EventBus.Distributed;
+using Volo.Abp.Timing;
 using Volo.Abp.Uow;
 
 namespace Volo.Abp.EntityFrameworkCore.DistributedEvents;
@@ -9,7 +9,8 @@ namespace Volo.Abp.EntityFrameworkCore.DistributedEvents;
 public class SqlRawDbContextEventEnhancedOutbox<TDbContext> : DbContextEventEnhancedOutbox<TDbContext>, ISqlRawDbContextEventOutbox<TDbContext>
     where TDbContext : IHasEventOutbox
 {
-    public SqlRawDbContextEventEnhancedOutbox(IDbContextProvider<TDbContext> dbContextProvider, IDistributedEventBus distributedEventBus) : base(dbContextProvider, distributedEventBus)
+    public SqlRawDbContextEventEnhancedOutbox(IDbContextProvider<TDbContext> dbContextProvider, IClock clock)
+        : base(dbContextProvider, clock)
     {
     }
 

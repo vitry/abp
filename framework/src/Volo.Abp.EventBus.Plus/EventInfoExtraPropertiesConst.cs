@@ -11,14 +11,7 @@ public static class EventInfoExtraPropertiesConst
 
     public const string NextRetryTime = "NextRetryTime";
 
-    public const string Status = "Status";
-}
-
-public static class EventInfoStatusConst
-{
     public const string Failed = "Failed";
 
-    public const string Succeed = "Succeed";
-
-    public const string Scheduled = "Scheduled";
+    public const string Processed = "Processed";
 }

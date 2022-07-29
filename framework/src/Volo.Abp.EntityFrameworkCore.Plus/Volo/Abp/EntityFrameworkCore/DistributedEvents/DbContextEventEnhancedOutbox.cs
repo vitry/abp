@@ -4,10 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Volo.Abp.Data;
-using Volo.Abp.EventBus;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.EventBus.Plus;
+using Volo.Abp.Timing;
 using Volo.Abp.Uow;
 
 namespace Volo.Abp.EntityFrameworkCore.DistributedEvents;
@@ -15,12 +14,12 @@ namespace Volo.Abp.EntityFrameworkCore.DistributedEvents;
 public class DbContextEventEnhancedOutbox<TDbContext> : DbContextEventOutbox<TDbContext>, IDbContextEventOutbox<TDbContext>
     where TDbContext : IHasEventOutbox
 {
-    public DbContextEventEnhancedOutbox(IDbContextProvider<TDbContext> dbContextProvider, IDistributedEventBus distributedEventBus) : base(dbContextProvider)
+    public DbContextEventEnhancedOutbox(IDbContextProvider<TDbContext> dbContextProvider, IClock clock) : base(dbContextProvider)
     {
-        DistributedEventBus = distributedEventBus;
+        Clock = clock;
     }
 
-    protected IDistributedEventBus DistributedEventBus { get; }
+    protected IClock Clock { get; }
 
     [UnitOfWork]
     public override async Task EnqueueAsync(OutgoingEventInfo outgoingEvent)
@@ -37,7 +36,6 @@ public class DbContextEventEnhancedOutbox<TDbContext> : DbContextEventOutbox<TDb
             record.UpdateExtraProperties(outgoingEvent.ExtraProperties);
             dbContext.OutgoingEvents.Add(record);
         }
-        await PublishOutgoingEventInfoChangedEvent(outgoingEvent);
     }
 
     /// <summary>
@@ -56,31 +54,14 @@ public class DbContextEventEnhancedOutbox<TDbContext> : DbContextEventOutbox<TDb
             .AsNoTracking()
             .Where(x =>
                 // at least once
-                (string)x.ExtraProperties[EventInfoExtraPropertiesConst.Status] != EventInfoStatusConst.Failed
-                || ((string)x.ExtraProperties[EventInfoExtraPropertiesConst.Status] == EventInfoStatusConst.Failed
-                    && (DateTime)x.ExtraProperties[EventInfoExtraPropertiesConst.NextRetryTime] <= DateTime.Now)
+                !(bool)x.ExtraProperties[EventInfoExtraPropertiesConst.Failed]
+                || ((bool)x.ExtraProperties[EventInfoExtraPropertiesConst.Failed]
+                    && (DateTime)x.ExtraProperties[EventInfoExtraPropertiesConst.NextRetryTime] <= Clock.Now)
                 )
             .OrderBy(x => x.CreationTime)
             .Take(maxCount)
             .ToListAsync(cancellationToken: cancellationToken);
 
-        return outgoingEventRecords.Select(x =>
-        {
-            var info = x.ToOutgoingEventInfo();
-            foreach (var prop in x.ExtraProperties)
-            {
-                info.SetProperty(prop.Key, prop.Value);
-            }
-            return info;
-        }).ToList();
-    }
-
-    private async Task PublishOutgoingEventInfoChangedEvent(OutgoingEventInfo outgoingEvent)
-    {
-        // Sync outgoing event sending log.
-        if (outgoingEvent.EventName != EventNameAttribute.GetNameOrDefault(typeof(OutgoingEventInfoChangedEvent)))
-        {
-            await DistributedEventBus.PublishAsync(new OutgoingEventInfoChangedEvent(outgoingEvent));
-        }
+        return outgoingEventRecords.Select(x => x.ToExtraPropsOutgoingEventInfo()).ToList();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using Volo.Abp.Data;
 using Volo.Abp.EventBus.Distributed;
+using Volo.Abp.Timing;
 
 namespace Volo.Abp.EventBus.Plus;
 
@@ -12,11 +13,11 @@ public static class OutgoingEventInfoExtensions
         {
             outgoingEventInfo.AddRetryCount();
         }
-        outgoingEventInfo.SetStatus(EventInfoStatusConst.Failed);
+        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Failed, true);
         outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Exception, exception);
     }
 
-    public static bool TryScheduleRetryLater(this OutgoingEventInfo outgoingEventInfo, (int retryMaxCount, TimeSpan[] failRetryIntervals) retryConfig)
+    public static bool TryScheduleRetryLater(this OutgoingEventInfo outgoingEventInfo, (int retryMaxCount, TimeSpan[] failRetryIntervals) retryConfig, IClock clock)
     {
         int retriedTimes = (int)outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.Retries);
         // do not retry dead letter
@@ -26,11 +27,21 @@ public static class OutgoingEventInfoExtensions
         }
         outgoingEventInfo.NextRetryOn(ScheduleNextRetryTime(retriedTimes, retryConfig.failRetryIntervals));
         return true;
+
+        DateTime ScheduleNextRetryTime(int retryCount, TimeSpan[] failRetryIntervals)
+        {
+            int intervalIndex =
+                retryCount > failRetryIntervals.Length - 1
+                ? failRetryIntervals.Length : retryCount;
+
+            TimeSpan interval = failRetryIntervals[intervalIndex];
+            return clock.Now + interval;
+        }
     }
 
     public static bool IsFailureRetrying(this OutgoingEventInfo outgoingEventInfo)
     {
-        return outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.NextRetryTime) != null;
+        return (bool)outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.Failed);
     }
 
     public static void AddRetryCount(this OutgoingEventInfo outgoingEventInfo)
@@ -45,7 +56,8 @@ public static class OutgoingEventInfoExtensions
         {
             outgoingEventInfo.AddRetryCount();
         }
-        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Status, EventInfoStatusConst.Succeed);
+        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Processed, true);
+        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Failed, false);
     }
 
     private static void NextRetryOn(this OutgoingEventInfo outgoingEventInfo, DateTime nextRetryTime)
@@ -53,20 +65,5 @@ public static class OutgoingEventInfoExtensions
         var retries = outgoingEventInfo.GetProperty(EventInfoExtraPropertiesConst.Retries);
         outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Retries, retries == null ? 0 : (int)retries);
         outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.NextRetryTime, nextRetryTime);
-    }
-
-    private static void SetStatus(this OutgoingEventInfo outgoingEventInfo, string statusName)
-    {
-        outgoingEventInfo.SetProperty(EventInfoExtraPropertiesConst.Status, statusName);
-    }
-
-    private static DateTime ScheduleNextRetryTime(int retryCount, TimeSpan[] failRetryIntervals)
-    {
-        int intervalIndex =
-            retryCount > failRetryIntervals.Length - 1
-            ? failRetryIntervals.Length : retryCount;
-
-        TimeSpan interval = failRetryIntervals[intervalIndex];
-        return DateTime.UtcNow + interval;
     }
 }
