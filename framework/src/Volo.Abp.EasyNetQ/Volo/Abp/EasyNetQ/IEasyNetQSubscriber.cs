@@ -7,9 +7,9 @@ public interface IEasyNetQSubscriber
 {
     void Initialize(string subscriptionId, string busName = null);
 
-    Task SubscribeAsync(Type eventType);
+    void Subscribe(Type eventType);
 
-    Task UnSubscribeAsync(Type eventType);
+    void UnSubscribe(Type eventType);
 
     void OnMessageReceived(Func<object, string, Task> callback);
 }

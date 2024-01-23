@@ -149,7 +149,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
         if (handlerFactories.Count == 1)
         {
-            Subscriber.SubscribeAsync(eventType);
+            Subscriber.Subscribe(eventType);
         }
 
         return new EventHandlerFactoryUnregistrar(this, eventType, factory);

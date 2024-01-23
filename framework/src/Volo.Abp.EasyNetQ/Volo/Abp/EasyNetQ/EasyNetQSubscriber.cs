@@ -67,16 +67,14 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
         Callbacks.Add(callback);
     }
 
-    public Task SubscribeAsync(Type eventType)
+    public void Subscribe(Type eventType)
     {
         SubscribeCommandQueue.TryAdd(new QueueSubscribeCommand(QueueSubscribeType.Subscribe, eventType));
-        return Task.CompletedTask;
     }
 
-    public Task UnSubscribeAsync(Type eventType)
+    public void UnSubscribe(Type eventType)
     {
         SubscribeCommandQueue.TryAdd(new QueueSubscribeCommand(QueueSubscribeType.Unsubscribe, eventType));
-        return Task.CompletedTask;
     }
 
     protected virtual async Task StartSendQueueSubscribeCommandsAsync()
