@@ -4,13 +4,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
+using Volo.Abp.AspNetCore.Filters;
 using Volo.Abp.AspNetCore.Uow;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Uow;
 
 namespace Volo.Abp.AspNetCore.Mvc.Uow;
 
-public class AbpUowPageFilter : IAsyncPageFilter, ITransientDependency
+public class AbpUowPageFilter : IAsyncPageFilter, IAbpFilter, ITransientDependency
 {
     public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
     {
@@ -73,7 +74,7 @@ public class AbpUowPageFilter : IAsyncPageFilter, ITransientDependency
         }
     }
 
-    private AbpUnitOfWorkOptions CreateOptions(PageHandlerExecutingContext context, UnitOfWorkAttribute unitOfWorkAttribute)
+    private AbpUnitOfWorkOptions CreateOptions(PageHandlerExecutingContext context, UnitOfWorkAttribute? unitOfWorkAttribute)
     {
         var options = new AbpUnitOfWorkOptions();
 
@@ -104,7 +105,15 @@ public class AbpUowPageFilter : IAsyncPageFilter, ITransientDependency
         var currentUow = unitOfWorkManager.Current;
         if (currentUow != null)
         {
-            await currentUow.SaveChangesAsync(context.HttpContext.RequestAborted);
+            try
+            {
+                await currentUow.SaveChangesAsync(context.HttpContext.RequestAborted);
+            }
+            catch (Exception e)
+            {
+                await currentUow.RollbackAsync(context.HttpContext.RequestAborted);
+                throw;
+            }
         }
     }
 

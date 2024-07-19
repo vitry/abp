@@ -54,6 +54,9 @@
     "Version": "Različica",
     "LanguageCode": "Jezikovna koda",
     "FileName": "Ime datoteke",
-    "LastCachedTime": "Čas predpomnilnika"
+    "LastCachedTime": "Čas pred pomnilnika",
+    "Project": "Projekt",
+    "AdvancedFilters": "Napredni filtri",
+    "RemoveCacheAndReIndexConfirmation": "Dokument »{0}« bo odstranjen iz predpomnilnika in ponovno indeksiran. Ali potrjuješ?"
   }
 }

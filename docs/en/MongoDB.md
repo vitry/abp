@@ -4,11 +4,13 @@ This document explains how to integrate MongoDB as a database provider to ABP ba
 
 ## Installation
 
-`Volo.Abp.MongoDB` is the main nuget package for the MongoDB integration. Install it to your project (for a layered application, to your data/infrastructure layer):
+`Volo.Abp.MongoDB` is the main NuGet package for the MongoDB integration. Install it to your project (for a layered application, to your data/infrastructure layer), You can use the [ABP CLI](CLI.md) to install it to your project. Execute the following command in the folder of the .csproj file of the layer:
 
 ```
-Install-Package Volo.Abp.MongoDB
+abp add-package Volo.Abp.MongoDB
 ```
+
+> If you haven't done it yet, you first need to install the [ABP CLI](CLI.md). For other installation options, see [the package description page](https://abp.io/package-detail/Volo.Abp.MongoDB).
 
 Then add `AbpMongoDbModule` module dependency to your [module](Module-Development-Basics.md):
 
@@ -79,6 +81,34 @@ If you only need to configure the collection name, you can also use `[MongoColle
 [MongoCollection("MyQuestions")] //Sets the collection name
 public IMongoCollection<Question> Questions => Collection<Question>();
 ````
+
+### Configure Indexes and CreateCollectionOptions for a Collection
+
+You can configure indexes and `CreateCollectionOptions` for your collections by overriding the `CreateModel` method. Example:
+
+````csharp
+protected override void CreateModel(IMongoModelBuilder modelBuilder)
+{
+    base.CreateModel(modelBuilder);
+
+    modelBuilder.Entity<Question>(b =>
+    {
+        b.CreateCollectionOptions.Collation = new Collation(locale:"en_US", strength: CollationStrength.Secondary);
+        b.ConfigureIndexes(indexes =>
+            {
+                indexes.CreateOne(
+                    new CreateIndexModel<BsonDocument>(
+                        Builders<BsonDocument>.IndexKeys.Ascending("MyProperty"),
+                        new CreateIndexOptions { Unique = true }
+                    )
+                );
+            }
+        );
+    });
+}
+````
+
+This example sets a collation for the collection and creates a unique index for the `MyProperty` property.
 
 ### Configure the Connection String Selection
 
@@ -279,7 +309,7 @@ public class BookService
 
 ### Transactions
 
-MongoDB supports multi-document transactions starting from the version 4.0 and the ABP Framework supports it. However, the [startup template](Startup-templates/Index.md) **disables** transactions by default. If your MongoDB **server** supports transactions, you can enable the it in the *YourProjectMongoDbModule* class:
+MongoDB supports multi-document transactions starting from the version 4.0 and the ABP Framework supports it. However, the [startup template](Startup-Templates/Index.md) **disables** transactions by default. If your MongoDB **server** supports transactions, you can enable the it in the *YourProjectMongoDbModule* class:
 
 ```csharp
 Configure<AbpUnitOfWorkDefaultOptions>(options =>
@@ -393,7 +423,7 @@ One advantage of using interface for a MongoDbContext is then it becomes replace
 
 Once you properly define and use an interface for a MongoDbContext , then any other implementation can use the following ways to replace it:
 
-**ReplaceDbContextAttribute**
+#### ReplaceDbContext Attribute
 
 ```csharp
 [ReplaceDbContext(typeof(IBookStoreMongoDbContext))]
@@ -403,7 +433,7 @@ public class OtherMongoDbContext : AbpMongoDbContext, IBookStoreMongoDbContext
 }
 ```
 
-**ReplaceDbContext option**
+#### ReplaceDbContext Option
 
 ```csharp
 context.Services.AddMongoDbContext<OtherMongoDbContext>(options =>
@@ -414,6 +444,22 @@ context.Services.AddMongoDbContext<OtherMongoDbContext>(options =>
 ```
 
 In this example, `OtherMongoDbContext` implements `IBookStoreMongoDbContext`. This feature allows you to have multiple MongoDbContext (one per module) on development, but single MongoDbContext (implements all interfaces of all MongoDbContexts) on runtime.
+
+#### Replacing with Multi-Tenancy
+
+It is also possible to replace a DbContext based on the [multi-tenancy](Multi-Tenancy.md) side. `ReplaceDbContext` attribute and  `ReplaceDbContext` method can get a `MultiTenancySides` option with a default value of `MultiTenancySides.Both`.
+
+**Example:** Replace DbContext only for tenants, using the `ReplaceDbContext` attribute
+
+````csharp
+[ReplaceDbContext(typeof(IBookStoreDbContext), MultiTenancySides.Tenant)]
+````
+
+**Example:** Replace DbContext only for the host side, using the `ReplaceDbContext` method
+
+````csharp
+options.ReplaceDbContext<IBookStoreDbContext>(MultiTenancySides.Host);
+````
 
 ### Customize Bulk Operations
 
@@ -464,3 +510,4 @@ public class MyCustomMongoDbBulkOperationProvider
 
 * [Entities](Entities.md)
 * [Repositories](Repositories.md)
+* [Video tutorial](https://abp.io/video-courses/essentials/abp-mongodb)

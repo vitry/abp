@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Volo.Abp.AspNetCore.Authentication.OpenIdConnect;
 using Volo.Abp.AspNetCore.MultiTenancy;
+using Volo.Abp.Security.Claims;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -24,11 +25,19 @@ public static class AbpOpenIdConnectExtensions
 
     public static AuthenticationBuilder AddAbpOpenIdConnect(this AuthenticationBuilder builder, string authenticationScheme, string displayName, Action<OpenIdConnectOptions> configureOptions)
     {
+        builder.Services.Configure<AbpClaimsPrincipalFactoryOptions>(options =>
+        {
+            var openIdConnectOptions = new OpenIdConnectOptions();
+            configureOptions?.Invoke(openIdConnectOptions);
+            if (!openIdConnectOptions.Authority.IsNullOrEmpty())
+            {
+                options.RemoteRefreshUrl = openIdConnectOptions.Authority.RemovePostFix("/") + options.RemoteRefreshUrl;
+            }
+        });
+
         return builder.AddOpenIdConnect(authenticationScheme, displayName, options =>
         {
             options.ClaimActions.MapAbpClaimTypes();
-
-            configureOptions?.Invoke(options);
 
             options.Events ??= new OpenIdConnectEvents();
             var authorizationCodeReceived = options.Events.OnAuthorizationCodeReceived ?? (_ => Task.CompletedTask);
@@ -39,17 +48,8 @@ public static class AbpOpenIdConnectExtensions
                 return authorizationCodeReceived.Invoke(receivedContext);
             };
 
-            options.Events.OnRemoteFailure = remoteFailureContext =>
-            {
-                if (remoteFailureContext.Failure is OpenIdConnectProtocolException &&
-                    remoteFailureContext.Failure.Message.Contains("access_denied"))
-                {
-                    remoteFailureContext.HandleResponse();
-                    remoteFailureContext.Response.Redirect($"{remoteFailureContext.Request.PathBase}/");
-                }
-                return Task.CompletedTask;
-            };
-            
+            options.AccessDeniedPath = "/";
+
             options.Events.OnTokenValidated = async (context) =>
             {
                 var client = context.HttpContext.RequestServices.GetRequiredService<IOpenIdLocalUserCreationClient>();
@@ -63,6 +63,8 @@ public static class AbpOpenIdConnectExtensions
                     logger?.LogException(ex);
                 }
             };
+
+            configureOptions?.Invoke(options);
         });
     }
 

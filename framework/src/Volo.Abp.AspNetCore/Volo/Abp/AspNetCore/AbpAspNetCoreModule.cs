@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+﻿using System;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.RequestLocalization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.Auditing;
 using Volo.Abp.AspNetCore.VirtualFileSystem;
 using Volo.Abp.Auditing;
@@ -27,12 +25,24 @@ namespace Volo.Abp.AspNetCore;
     typeof(AbpHttpModule),
     typeof(AbpAuthorizationModule),
     typeof(AbpValidationModule),
-    typeof(AbpExceptionHandlingModule)
+    typeof(AbpExceptionHandlingModule),
+    typeof(AbpAspNetCoreAbstractionsModule)
     )]
 public class AbpAspNetCoreModule : AbpModule
 {
+    public override void PreConfigureServices(ServiceConfigurationContext context)
+    {
+        var abpHostEnvironment = context.Services.GetSingletonInstance<IAbpHostEnvironment>();
+        if (abpHostEnvironment.EnvironmentName.IsNullOrWhiteSpace())
+        {
+            abpHostEnvironment.EnvironmentName = context.Services.GetHostingEnvironment().EnvironmentName;
+        }
+    }
+
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        context.Services.AddAuthorization();
+
         Configure<AbpAuditingOptions>(options =>
         {
             options.Contributors.Add(new AspNetCoreAuditLogContributor());

@@ -19,7 +19,7 @@
     "SuccessfullyReIndexAllProject": "Tüm projeler başarıyla yeniden indekslendi",
     "InThisDocument": "Bu dökümanda",
     "GoToTop": "En üste çık",
-    "Projects": "Proje(ler)",
+    "Projects": "Projeler",
     "NoProjectWarning": "Hiç proje yok!",
     "DocumentNotFound": "Aradığınız döküman bulunamadı!",
     "ProjectNotFound": "Talep edilen proje bulunamadı!",
@@ -36,6 +36,7 @@
     "Volo.Docs.Domain:010002": "ShortName {ShortName} zaten var.",
     "Preview": "ön izleme",
     "Search": "Arama",
-    "SearchResults": "Arama Sonuçları"
+    "SearchResults": "Arama Sonuçları",
+    "GoogleTranslate": "Google Çeviri"
   }
 }

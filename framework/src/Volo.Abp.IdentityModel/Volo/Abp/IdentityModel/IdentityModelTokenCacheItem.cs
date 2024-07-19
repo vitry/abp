@@ -7,7 +7,7 @@ namespace Volo.Abp.IdentityModel;
 [Serializable]
 public class IdentityModelTokenCacheItem
 {
-    public string AccessToken { get; set; }
+    public string AccessToken { get; set; } = default!;
 
     public IdentityModelTokenCacheItem()
     {
@@ -21,6 +21,6 @@ public class IdentityModelTokenCacheItem
 
     public static string CalculateCacheKey(IdentityClientConfiguration configuration)
     {
-        return string.Join(",", configuration.Select(x => x.Key + ":" + x.Value)).ToMd5();
+        return string.Join(",", configuration.Select(x => x.Key + ":" + x.Value)).ToSha256();
     }
 }

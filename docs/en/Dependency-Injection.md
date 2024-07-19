@@ -1,12 +1,12 @@
 # Dependency Injection
 
-ABP's Dependency Injection system is developed based on Microsoft's [dependency injection extension](https://medium.com/volosoft/asp-net-core-dependency-injection-best-practices-tips-tricks-c6e9c67f9d96) library (Microsoft.Extensions.DependencyInjection nuget package). So, it's documentation is valid in ABP too.
+ABP's Dependency Injection system is developed based on Microsoft's [dependency injection extension](https://medium.com/volosoft/asp-net-core-dependency-injection-best-practices-tips-tricks-c6e9c67f9d96) library (Microsoft.Extensions.DependencyInjection nuget package). So, its documentation is valid in ABP too.
 
-> While ABP has no core dependency to any 3rd-party DI provider, it's required to use a provider that supports dynamic proxying and some other advanced features to make some ABP features properly work. Startup templates come with Autofac installed. See [Autofac integration](Autofac-Integration.md) document for more information.
+> While ABP has no core dependency to any 3rd-party DI provider. However, it's required to use a provider that supports dynamic proxying and some other advanced features to make some ABP features properly work. Startup templates come with [Autofac](https://autofac.org/) installed. See [Autofac integration](Autofac-Integration.md) document for more information.
 
 ## Modularity
 
-Since ABP is a modular framework, every module defines it's own services and registers via dependency injection in it's own seperate [module class](Module-Development-Basics.md). Example:
+Since ABP is a modular framework, every module defines its own services and registers via dependency injection in its own separate [module class](Module-Development-Basics.md). Example:
 
 ````C#
 public class BlogModule : AbpModule
@@ -20,24 +20,24 @@ public class BlogModule : AbpModule
 
 ## Conventional Registration
 
-ABP introduces conventional service registration. You need not do anything to register a service by convention. It's automatically done. If you want to disable it, you can set `SkipAutoServiceRegistration` to `true` by overriding the `PreConfigureServices` method.
+ABP introduces conventional service registration. You need not do anything to register a service by convention. It's automatically done. If you want to disable it, you can set `SkipAutoServiceRegistration` to `true` in the constructor of your module class. Example:
 
 ````C#
 public class BlogModule : AbpModule
 {
-    public override void PreConfigureServices(ServiceConfigurationContext context)
+    public BlogModule()
     {
         SkipAutoServiceRegistration = true;
     }
 }
 ````
 
-Once you skip auto registration, you should manually register your services. In that case, ``AddAssemblyOf`` extension method can help you to register all your services by convention. Example:
+Once you skip the auto registration, you should manually register your services. In that case, ``AddAssemblyOf`` extension method can help you to register all your services by convention. Example:
 
 ````c#
 public class BlogModule : AbpModule
 {
-    public override void PreConfigureServices(ServiceConfigurationContext context)
+    public BlogModule()
     {
         SkipAutoServiceRegistration = true;
     }
@@ -105,9 +105,7 @@ Example:
 [Dependency(ServiceLifetime.Transient, ReplaceServices = true)]
 public class TaxCalculator
 {
-
 }
-
 ````
 
 ``Dependency`` attribute has a higher priority than other dependency interfaces if it defines the ``Lifetime`` property.
@@ -120,7 +118,6 @@ public class TaxCalculator
 [ExposeServices(typeof(ITaxCalculator))]
 public class TaxCalculator: ICalculator, ITaxCalculator, ICanCalculate, ITransientDependency
 {
-
 }
 ````
 
@@ -132,6 +129,7 @@ If you do not specify which services to expose, ABP expose services by conventio
 
 * The class itself is exposed by default. That means you can inject it by ``TaxCalculator`` class.
 * Default interfaces are exposed by default. Default interfaces are determined by naming convention. In this example, ``ICalculator`` and ``ITaxCalculator`` are default interfaces of ``TaxCalculator``, but ``ICanCalculate`` is not. A generic interface (e.g. `ICalculator<string>`) is also considered as a default interface if the naming convention is satisfied.
+* The resolved instances will be the same if multiple services are exposed for **Singleton** and **Scoped** services. This behavior requires exposing the class itself.
 
 ### Combining All Together
 
@@ -143,6 +141,50 @@ Combining attributes and interfaces is possible as long as it's meaningful.
 public class TaxCalculator : ITaxCalculator, ITransientDependency
 {
 
+}
+````
+
+### ExposeKeyedService Attribute 
+
+`ExposeKeyedServiceAttribute` is used to control which keyed services are provided by the related class. Example:
+
+````C#
+[ExposeKeyedService<ITaxCalculator>("taxCalculator")]
+[ExposeKeyedService<ICalculator>("calculator")]
+public class TaxCalculator: ICalculator, ITaxCalculator, ICanCalculate, ITransientDependency
+{
+}
+````
+
+In the example above, the `TaxCalculator` class exposes the `ITaxCalculator` interface with the key `taxCalculator` and the `ICalculator` interface with the key `calculator`. That means you can get keyed services from the `IServiceProvider` as shown below:
+
+````C#
+var taxCalculator = ServiceProvider.GetRequiredKeyedService<ITaxCalculator>("taxCalculator");
+var calculator = ServiceProvider.GetRequiredKeyedService<ICalculator>("calculator");
+````
+
+Also, you can use the [`FromKeyedServicesAttribute`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.dependencyinjection.fromkeyedservicesattribute?view=dotnet-plat-ext-8.0) to resolve a certain keyed service in the constructor:
+
+```csharp
+public class MyClass
+{
+    //...
+
+    public MyClass([FromKeyedServices("taxCalculator")] ITaxCalculator taxCalculator)
+    {
+        TaxCalculator = taxCalculator;
+    }
+}
+```
+
+> Notice that the `ExposeKeyedServiceAttribute` only exposes the keyed services. So, you can not inject the `ITaxCalculator` or `ICalculator` interfaces in your application without using the `FromKeyedServicesAttribute` as shown in the example above. If you want to expose both keyed and non-keyed services, you can use the `ExposeServicesAttribute` and `ExposeKeyedServiceAttribute` attributes together as shown below:
+
+````C#
+[ExposeKeyedService<ITaxCalculator>("taxCalculator")]
+[ExposeKeyedService<ICalculator>("calculator")]
+[ExposeServices(typeof(ITaxCalculator), typeof(ICalculator))]
+public class TaxCalculator: ICalculator, ITaxCalculator, ICanCalculate, ITransientDependency
+{
 }
 ````
 
@@ -179,7 +221,11 @@ public class MyModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         //Replacing the IConnectionStringResolver service
-        context.Services.Replace(ServiceDescriptor.Transient<IConnectionStringResolver, MyConnectionStringResolver>());
+        context.Services.Replace(
+            ServiceDescriptor.Transient<
+            	IConnectionStringResolver,
+                MyConnectionStringResolver
+            >());
     }
 }
 ````
@@ -202,14 +248,14 @@ public class TaxAppService : ApplicationService
         _taxCalculator = taxCalculator;
     }
 
-    public void DoSomething()
+    public async Task DoSomethingAsync()
     {
         //...use _taxCalculator...
     }
 }
 ````
 
-``TaxAppService`` gets ``ITaxCalculator`` in it's constructor. The dependency injection system automatically provides the requested service at runtime.
+``TaxAppService`` gets ``ITaxCalculator`` in its constructor. The dependency injection system automatically provides the requested service at runtime.
 
 Constructor injection is preffered way of injecting dependencies to a class. In that way, the class can not be constructed unless all constructor-injected dependencies are provided. Thus, the class explicitly declares it's required services.
 
@@ -227,7 +273,7 @@ public class MyService : ITransientDependency
         Logger = NullLogger<MyService>.Instance;
     }
 
-    public void DoSomething()
+    public async Task DoSomethingAsync()
     {
         //...use Logger to write logs...
     }
@@ -244,24 +290,57 @@ One restriction of property injection is that you cannot use the dependency in y
 
 Property injection is also useful when you want to design a base class that has some common services injected by default. If you're going to use constructor injection, all derived classes should also inject depended services into their own constructors which makes development harder. However, be very careful using property injection for non-optional services as it makes it harder to clearly see the requirements of a class.
 
+#### DisablePropertyInjection Attribute
+
+You can use `[DisablePropertyInjection]` attribute on classes or their properties to disable property injection for the whole class or some specific properties.
+
+````C#
+// Disabling for all properties of the MyService class
+[DisablePropertyInjection]
+public class MyService : ITransientDependency
+{
+    public ILogger<MyService> Logger { get; set; }
+    
+    public ITaxCalculator TaxCalculator { get; set; }
+}
+
+// Disabling only for the TaxCalculator property
+public class MyService : ITransientDependency
+{
+    public ILogger<MyService> Logger { get; set; }
+
+    [DisablePropertyInjection]
+    public ITaxCalculator TaxCalculator { get; set; }
+}
+````
+
+#### IInjectPropertiesService
+
+You can use the `IInjectPropertiesService` service to inject properties of an object. Generally, it is a service outside of DI, such as manually created services.
+
+````C#
+var injectPropertiesService = serviceProvider.GetRequiredService<IInjectPropertiesService>();
+var instance = new TestService();
+
+// Set any properties on instance that can be resolved by IServiceProvider.
+injectPropertiesService.InjectProperties(instance);
+
+// Set any null-valued properties on instance that can be resolved by the IServiceProvider.
+injectPropertiesService.InjectUnsetProperties(instance);
+````
+
 ### Resolve Service from IServiceProvider
 
-You may want to resolve a service directly from ``IServiceProvider``. In that case, you can inject IServiceProvider into your class and use ``GetService`` method as shown below:
+You may want to resolve a service directly from ``IServiceProvider``. In that case, you can inject `IServiceProvider` into your class and use the ``GetService`` or the `GetRequiredService` method as shown below:
 
 ````C#
 public class MyService : ITransientDependency
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ITaxCalculator _taxCalculator;
 
     public MyService(IServiceProvider serviceProvider)
     {
-        _serviceProvider = serviceProvider;
-    }
-
-    public void DoSomething()
-    {
-        var taxCalculator = _serviceProvider.GetService<ITaxCalculator>();
-        //...
+        _taxCalculator = serviceProvider.GetRequiredService<ITaxCalculator>();
     }
 }
 ````
@@ -364,15 +443,15 @@ IEnumerable<IExternalLogger> services = _serviceProvider.GetServices<IExternalLo
 
 ### Releasing/Disposing Services
 
-If you used a constructor or property injection, you don't need to be concerned about releasing the service's resources. However, if you have resolved a service from ``IServiceProvider``, you might, in some cases, need to take care about releasing the service resources.
+If you used a constructor or property injection, you don't need to be concerned about releasing the service's resources. However, if you have resolved a service from ``IServiceProvider``, in some cases, you might need to take care about releasing the service resources.
 
-ASP.NET Core releases all services at the end of a current HTTP request, even if you directly resolved from ``IServiceProvider`` (assuming you injected IServiceProvider). But, there are several cases where you may want to release/dispose manually resolved services:
+ASP.NET Core releases all services at the end of a current HTTP request, even if you directly resolved from ``IServiceProvider`` (assuming you injected `IServiceProvider`). But, there are several cases where you may want to release/dispose manually resolved services:
 
-* Your code is executed outside of AspNet Core request and the executer hasn't handled the service scope.
+* Your code is executed outside of ASP.NET Core request and the executer hasn't handled the service scope.
 * You only have a reference to the root service provider.
-* You may want to immediately release & dispose services (for example, you may creating too many services with big memory usage and don't want to overuse memory).
+* You may want to immediately release & dispose services (for example, you may creating too many services with big memory usages and don't want to overuse the memory).
 
-In any case, you can use such a 'using' code block to safely and immediately release services:
+In any case, you can create a service scope block to safely and immediately release services:
 
 ````C#
 using (var scope = _serviceProvider.CreateScope())
@@ -382,20 +461,55 @@ using (var scope = _serviceProvider.CreateScope())
 }
 ````
 
-Both services are released when the created scope is disposed (at the end of the using block).
+Both services are released when the created scope is disposed (at the end of the `using` block).
+
+### Cached Service Providers
+
+ABP provides two special services to optimize resolving services from `IServiceProvider`. `ICachedServiceProvider` and `ITransientCachedServiceProvider` both inherits from the `IServiceProvider` interface and internally caches the resolved services, so you get the same service instance even if you resolve a service multiple times.
+
+The main difference is the `ICachedServiceProvider` is itself registered as scoped, while the `ITransientCachedServiceProvider` is registered as transient to the dependency injection system.
+
+The following example injects the `ICachedServiceProvider` service and resolves a service in the `DoSomethingAsync` method:
+
+````csharp
+public class MyService : ITransientDependency
+{
+    private readonly ICachedServiceProvider _serviceProvider;
+
+    public MyService(ICachedServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
+
+    public async Task DoSomethingAsync()
+    {
+        var taxCalculator = _serviceProvider.GetRequiredService<ITaxCalculator>();
+        // TODO: Use the taxCalculator
+    }
+}
+
+````
+
+With such a usage, you don't need to deal with creating service scopes and disposing the resolved services (as explained in the *Releasing/Disposing Services* section above). Because all the services resolved from the `ICachedServiceProvider` will be released once the service scope of the `MyService` instance is disposed. Also, you don't need to care about memory leaks (because of creating too many `ITaxCalculator` instances if we call `DoSomethingAsync` too many times), because only one `ITaxCalculator` instance is created, and it is reused.
+
+Since `ICachedServiceProvider` and `ITransientCachedServiceProvider` extends the standard `IServiceProvider` interface, you can use all the extension method of the `IServiceProvider` interface on them. In addition, they provides some other methods to provide a default value or a factory method for the services that are not found (that means not registered to the dependency injection system). Notice that the default value (or the value returned from your factory method) is also cached and reused.
+
+Use `ICachedServiceProvider` (instead of `ITransientCachedServiceProvider`) unless you need to create the service cache per usage. `ITransientCachedServiceProvider` guarantees that the created service instances are not shared with any other service, even they are in the same service scope. The services resolved from `ICachedServiceProvider` are shared with other services in the same service scope (in the same HTTP Request, for example), so it can be thought as more optimized.
+
+> ABP Framework also provides the `IAbpLazyServiceProvider` service. It does exists for backward compatibility and works exactly same with the `ITransientCachedServiceProvider` service. So, use the `ITransientCachedServiceProvider` since the `IAbpLazyServiceProvider` might be removed in future ABP versions.
 
 ## Advanced Features
 
-### IServiceCollection.OnRegistred Event
+### IServiceCollection.OnRegistered Event
 
-You may want to perform an action for every service registered to the dependency injection. In the `PreConfigureServices` method of your module, register a callback using the `OnRegistred` method as shown below:
+You may want to perform an action for every service registered to the dependency injection. In the `PreConfigureServices` method of your module, register a callback using the `OnRegistered` method as shown below:
 
 ````csharp
 public class AppModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.OnRegistred(ctx =>
+        context.Services.OnRegistered(ctx =>
         {
             var type = ctx.ImplementationType;
             //...
@@ -411,7 +525,7 @@ public class AppModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.OnRegistred(ctx =>
+        context.Services.OnRegistered(ctx =>
         {
             if (ctx.ImplementationType.IsDefined(typeof(MyLogAttribute), true))
             {
@@ -424,7 +538,25 @@ public class AppModule : AbpModule
 
 This example simply checks if the service class has `MyLogAttribute` attribute and adds `MyLogInterceptor` to the interceptor list if so.
 
-> Notice that `OnRegistred` callback might be called multiple times for the same service class if it exposes more than one service/interface. So, it's safe to use `Interceptors.TryAdd` method instead of `Interceptors.Add` method. See [the documentation](Dynamic-Proxying-Interceptors.md) of dynamic proxying / interceptors.
+> Notice that `OnRegistered` callback might be called multiple times for the same service class if it exposes more than one service/interface. So, it's safe to use `Interceptors.TryAdd` method instead of `Interceptors.Add` method. See [the documentation](Dynamic-Proxying-Interceptors.md) of dynamic proxying / interceptors.
+
+### IServiceCollection.OnActivated Event
+
+The `OnActivated` event is raised once a service is fully constructed. Here you can perform application-level tasks that depend on the service being fully constructed - these should be rare.
+
+````csharp
+var serviceDescriptor = ServiceDescriptor.Transient<MyServer, MyServer>();
+services.Add(serviceDescriptor);
+if (setIsReadOnly)
+{
+    services.OnActivated(serviceDescriptor, x =>
+    {
+        x.Instance.As<MyServer>().IsReadOnly = true;
+    });
+}
+````
+
+> Notice that `OnActivated` event can be registered multiple times for the same `ServiceDescriptor`.
 
 ## 3rd-Party Providers
 
@@ -435,3 +567,4 @@ Startup templates come with Autofac installed. See [Autofac integration](Autofac
 ## See Also
 
 * [ASP.NET Core Dependency Injection Best Practices, Tips & Tricks](https://medium.com/volosoft/asp-net-core-dependency-injection-best-practices-tips-tricks-c6e9c67f9d96)
+* [Video tutorial](https://abp.io/video-courses/essentials/dependency-injection)

@@ -1,6 +1,7 @@
 {
   "culture": "vi",
   "texts": {
+    "Volo.Abp.TenantManagement:DuplicateTenantName": "Tên người thuê đã tồn tại: {Name}",
     "Menu:TenantManagement": "Quản lý người thuê",
     "Tenants": "Người thuê",
     "NewTenant": "Người thuê mới",
@@ -10,7 +11,6 @@
     "ConnectionStrings": "Chuỗi kết nối",
     "DisplayName:DefaultConnectionString": "Chuỗi kết nối mặc định",
     "DisplayName:UseSharedDatabase": "Sử dụng cơ sở dữ liệu dùng chung",
-    "ManageHostFeatures": "Quản lý các tính năng của Máy chủ lưu trữ",
     "Permission:TenantManagement": "Quản lý khách thuê",
     "Permission:Create": "Tạo",
     "Permission:Edit": "Sửa",

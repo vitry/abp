@@ -4,33 +4,15 @@ It is possible to load [modules](Module-Development-Basics.md) as plug-ins. That
 
 ## Basic Usage
 
-`IServiceCollection.AddApplication<T>()` extension method can get options to configure the plug-in sources.
+The `WebApplicationBuilder.AddApplicationAsync<T>()` extension method can get options to configure the plug-in sources.
 
 **Example: Load plugins from a folder**
 
 ````csharp
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Volo.Abp.Modularity.PlugIns;
-
-namespace MyPlugInDemo.Web
+await builder.AddApplicationAsync<MyPlugInDemoWebModule>(options =>
 {
-    public class Startup
-    {
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddApplication<MyPlugInDemoWebModule>(options =>
-            {
-                options.PlugInSources.AddFolder(@"D:\Temp\MyPlugIns");
-            });
-        }
-
-        public void Configure(IApplicationBuilder app)
-        {
-            app.InitializeApplication();
-        }
-    }
-}
+    options.PlugInSources.AddFolder(@"D:\Temp\MyPlugIns");
+});
 ````
 
 * This is the `Startup` class of a typical ASP.NET Core application.
@@ -61,11 +43,13 @@ Create a simple **Class Library Project** in a solution:
 
 ![simple-plugin-library](images/simple-plugin-library.png)
 
-You can add ABP Framework packages you need to use in the module. At least, you should add the `Volo.Abp.Core` package to the project:
+You can add the ABP Framework packages that you need to use in the module. At least, you should add the `Volo.Abp.Core` package to the project, Execute the following command in the folder of the .csproj file that you want to install the package on:
 
+````bash
+abp add-package Volo.Abp.Core
 ````
-Install-Package Volo.Abp.Core
-````
+
+ If you haven't done it yet, you first need to install the [ABP CLI](CLI.md). For other installation options, see [the package description page](https://abp.io/package-detail/Volo.Abp.Core).
 
 Every [module](Module-Development-Basics.md) must declare a class derived from the `AbpModule`. Here, a simple module class that resolves a service and initializes it on the application startup:
 
@@ -119,6 +103,8 @@ Build the project, open the build folder, find the `MyPlugIn.dll`:
 ![simple-plug-in-dll-file](images/simple-plug-in-dll-file.png)
 
 Copy `MyPlugIn.dll` into the plug-in folder (`D:\Temp\MyPlugIns` for this example).
+
+> Please delete the `MyPlugIn.deps.json` file if you use `build folder` folder as `PlugInSources`.
 
 If you have configured the main application like described above (see Basic Usage section), you should see the `MyService has been initialized` log in the application startup.
 
@@ -228,3 +214,7 @@ If your module uses a relational database and [Entity Framework Core](Entity-Fra
 2. You can improve the `DbMigrator` application to find migrations of the plug-ins and execute them.
 
 There may be other solutions. For example, if your DB admin doesn't allow you to change the database schema in the application code, you may need to manually send a SQL file to the database admin to apply it to the database.
+
+### Plug In Sample
+
+We have a sample for this, You can download it from [abp-sample repository](https://github.com/abpframework/abp-samples/tree/master/DocumentationSamples/Plug-In)

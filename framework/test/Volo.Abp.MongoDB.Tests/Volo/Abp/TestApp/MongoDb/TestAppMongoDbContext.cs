@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EntityFrameworkCore.TestApp.FourthContext;
@@ -6,6 +7,7 @@ using Volo.Abp.MongoDB;
 using Volo.Abp.MongoDB.TestApp.FourthContext;
 using Volo.Abp.MongoDB.TestApp.ThirdDbContext;
 using Volo.Abp.TestApp.Domain;
+using Volo.Abp.TestApp.Testing;
 
 namespace Volo.Abp.TestApp.MongoDB;
 
@@ -24,6 +26,10 @@ public class TestAppMongoDbContext : AbpMongoDbContext, ITestAppMongoDbContext, 
 
     public IMongoCollection<FourthDbContextDummyEntity> FourthDummyEntities => Collection<FourthDbContextDummyEntity>();
 
+    public IMongoCollection<Product> Products => Collection<Product>();
+
+    public IMongoCollection<AppEntityWithNavigations> AppEntityWithNavigations => Collection<AppEntityWithNavigations>();
+
     protected internal override void CreateModel(IMongoModelBuilder modelBuilder)
     {
         base.CreateModel(modelBuilder);
@@ -31,6 +37,11 @@ public class TestAppMongoDbContext : AbpMongoDbContext, ITestAppMongoDbContext, 
         modelBuilder.Entity<City>(b =>
         {
             b.CollectionName = "MyCities";
+        });
+        
+        modelBuilder.Entity<Person>(b =>
+        {
+            b.CreateCollectionOptions.Collation = new Collation(locale:"en_US", strength: CollationStrength.Secondary);
         });
     }
 }

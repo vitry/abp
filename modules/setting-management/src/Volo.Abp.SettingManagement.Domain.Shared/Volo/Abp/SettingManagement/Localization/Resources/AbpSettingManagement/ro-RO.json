@@ -2,10 +2,24 @@
   "culture": "ro-RO",
   "texts": {
     "Settings": "Setări",
-    "SuccessfullySaved": "Salvat cu succes",
+    "SavedSuccessfully": "Salvat cu succes",
     "Permission:SettingManagement": "Administrarea setărilor",
     "Permission:Emailing": "Emailing",
+    "Permission:EmailingTest": "Test de trimitere prin e-mail",
+    "Permission:TimeZone": "Fus orar",
+    "SendTestEmail": "Trimite e-mail de test",
+    "SenderEmailAddress": "Adresa de e-mail a expeditorului",
+    "TargetEmailAddress": "Adresă de e-mail țintă",
+    "Subject": "Subiect",
+    "Body": "Corp",
+    "TestEmailSubject": "E-mail de testare {0}",
+    "TestEmailBody": "Testați corpul mesajului de e-mail aici",
+    "SuccessfullySent": "Trimis cu succes",
+    "Send": "Trimite",
     "Menu:Emailing": "Emailing",
+    "Menu:TimeZone": "Fus Orar",
+    "DisplayName:Timezone": "Fus orar",
+    "TimezoneHelpText": "Această setare este utilizată pentru aplicație sau pentru chiriași.",
     "SmtpHost": "Host",
     "SmtpPort": "Port",
     "SmtpUserName": "Nume de utilizator",
@@ -18,7 +32,7 @@
     "Feature:SettingManagementGroup": "Administrarea setărilor",
     "Feature:SettingManagementEnable": "Activează administrarea setărilor",
     "Feature:SettingManagementEnableDescription": "Activează sistemul de administrare a setărilor în aplicaţie.",
-    "Feature:AllowTenantsToChangeEmailSettings": "Permiteți chiriașilor să modifice setările de e-mail.",
-    "Feature:AllowTenantsToChangeEmailSettingsDescription": "Permiteți chiriașilor să modifice setările de e-mail."
+    "Feature:AllowChangingEmailSettings": "Permiteți modificarea setărilor de e-mail.",
+    "Feature:AllowChangingEmailSettingsDescription": "Permiteți modificarea setărilor de e-mail."
   }
 }

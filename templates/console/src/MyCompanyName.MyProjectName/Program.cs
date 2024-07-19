@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
+using Volo.Abp;
 
 namespace MyCompanyName.MyProjectName;
 
@@ -27,18 +30,32 @@ public class Program
         {
             Log.Information("Starting console host.");
 
-            await Host.CreateDefaultBuilder(args)
-                .ConfigureServices(services =>
-                {
-                    services.AddHostedService<MyProjectNameHostedService>();
-                })
-                .UseSerilog()
-                .RunConsoleAsync();
+            var builder = Host.CreateApplicationBuilder(args);
+
+            builder.Configuration.AddAppSettingsSecretsJson();
+            builder.Logging.ClearProviders().AddSerilog();
+
+            builder.ConfigureContainer(builder.Services.AddAutofacServiceProviderFactory());
+
+            builder.Services.AddHostedService<MyProjectNameHostedService>();
+
+            await builder.Services.AddApplicationAsync<MyProjectNameModule>();
+
+            var host = builder.Build();
+
+            await host.InitializeAsync();
+
+            await host.RunAsync();
 
             return 0;
         }
         catch (Exception ex)
         {
+            if (ex is HostAbortedException)
+            {
+                throw;
+            }
+
             Log.Fatal(ex, "Host terminated unexpectedly!");
             return 1;
         }

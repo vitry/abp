@@ -16,9 +16,10 @@
     },
     {
       "text": "Getting Started",
+      "path": "Getting-Started-Overall.md",
       "items": [
         {
-          "text": "Web Application",
+          "text": "Web Application - Layered Architecture",
           "path": "Getting-Started.md",
           "items": [
             {
@@ -36,12 +37,34 @@
           ]
         },
         {
+          "text": "Web Application - Single-Layered Architecture",
+          "path": "Getting-Started-Single-Layered.md",
+          "items": [
+            {
+              "text": "1: Setup Your Development Environment",
+              "path": "Getting-Started-Setup-Environment-Single-Layer.md"
+            },
+            {
+              "text": "2: Creating a New Solution",
+              "path": "Getting-Started-Create-Solution-Single-Layer.md"
+            },
+            {
+              "text": "3: Running the Solution",
+              "path": "Getting-Started-Running-Solution-Single-Layer.md"
+            }
+          ]
+        },
+        {
           "text": "Console Application",
           "path": "Startup-Templates/Console.md"
         },
         {
           "text": "WPF Application",
           "path": "Startup-Templates/WPF.md"
+        },
+        {
+          "text": "MAUI",
+          "path": "Startup-Templates/MAUI.md"
         },
         {
           "text": "Empty Web Project",
@@ -150,6 +173,42 @@
       "text": "Fundamentals",
       "items": [
         {
+          "text": "Application Startup",
+          "path": "Application-Startup.md"
+        },
+        {
+          "text": "Authorization",
+          "path": "Authorization.md",
+          "items": [
+            {
+              "text": "Dynamic Claims",
+              "path": "Dynamic-Claims.md"
+            }
+          ]
+        },
+        {
+          "text": "Caching",
+          "path": "Caching.md",
+          "items": [
+            {
+              "text": "Entity Cache",
+              "path": "Entity-Cache.md"
+            },
+            {
+              "text": "Redis Cache",
+              "path": "Redis-Cache.md"
+            }
+          ]
+        },
+        {
+          "text": "Configuration",
+          "path": "Configuration.md"
+        },
+        {
+          "text": "Connection Strings",
+          "path": "Connection-Strings.md"
+        },
+        {
           "text": "Dependency Injection",
           "path": "Dependency-Injection.md",
           "items": [
@@ -160,16 +219,28 @@
           ]
         },
         {
-          "text": "Configuration",
-          "path": "Configuration.md"
+          "text": "Exception Handling",
+          "path": "Exception-Handling.md"
+        },
+        {
+          "text": "Localization",
+          "path": "Localization.md"
+        },
+        {
+          "text": "Logging",
+          "path": "Logging.md"
+        },
+        {
+          "text": "Object Extensions",
+          "path": "Object-Extensions.md"
         },
         {
           "text": "Options",
           "path": "Options.md"
         },
         {
-          "text": "Authorization",
-          "path": "Authorization.md"
+          "text": "Settings",
+          "path": "Settings.md"
         },
         {
           "text": "Validation",
@@ -180,40 +251,6 @@
               "path": "FluentValidation.md"
             }
           ]
-        },
-        {
-          "text": "Localization",
-          "path": "Localization.md"
-        },
-        {
-          "text": "Caching",
-          "path": "Caching.md",
-          "items": [
-            {
-              "text": "Redis Cache",
-              "path": "Redis-Cache.md"
-            }
-          ]
-        },
-        {
-          "text": "Exception Handling",
-          "path": "Exception-Handling.md"
-        },
-        {
-          "text": "Settings",
-          "path": "Settings.md"
-        },
-        {
-          "text": "Connection Strings",
-          "path": "Connection-Strings.md"
-        },
-        {
-          "text": "Object Extensions",
-          "path": "Object-Extensions.md"
-        },
-        {
-          "text": "Logging",
-          "path": "Logging.md"
         }
       ]
     },
@@ -385,6 +422,10 @@
         {
           "text": "GUID Generation",
           "path": "Guid-Generation.md"
+        },
+        {
+          "text": "Image Manipulation",
+          "path": "Image-Manipulation.md"
         },
         {
           "text": "JSON",
@@ -593,6 +634,23 @@
       "text": "API",
       "items": [
         {
+          "text": "ABP Endpoints",
+          "items": [
+            {
+              "text": "Application Configuration",
+              "path": "API/Application-Configuration.md"
+            },
+            {
+              "text": "Application Localization",
+              "path": "API/Application-Localization.md"
+            }
+          ]
+        },
+        {
+          "text": "API Versioning",
+          "path": "API/API-Versioning.md"
+        },
+        {
           "text": "Auto API Controllers",
           "path": "API/Auto-API-Controllers.md"
         },
@@ -601,25 +659,16 @@
           "path": "API/Dynamic-CSharp-API-Clients.md"
         },
         {
+          "text": "Integration Services",
+          "path": "Integration-Services.md"
+        },
+        {
           "text": "Static C# API Clients",
           "path": "API/Static-CSharp-API-Clients.md"
         },
         {
-          "text": "ABP Endpoints",
-          "items": [
-            {
-              "text": "Application Configuration",
-              "path": "API/Application-Configuration.md"
-            }
-          ]
-        },
-        {
           "text": "Swagger Integration",
           "path": "API/Swagger-Integration.md"
-        },
-        {
-          "text": "API Versioning",
-          "path": "API/API-Versioning.md"
         }
       ]
     },
@@ -721,7 +770,7 @@
                 },
                 {
                   "text": "LeptonX Lite",
-                  "path": "Themes/LeptonXLite/mvc.md"
+                  "path": "Themes/LeptonXLite/AspNetCore.md"
                 }
               ]
             },
@@ -806,6 +855,15 @@
                   "path": "UI/AspNetCore/Page-Toolbar-Extensions.md"
                 }
               ]
+            },
+            {
+              "text": "Security",
+              "items": [
+                {
+                  "text": "Security Headers",
+                  "path": "UI/AspNetCore/Security-Headers.md"
+                }
+              ]
             }
           ]
         },
@@ -819,6 +877,10 @@
             {
               "text": "Navigation / Menu",
               "path": "UI/Blazor/Navigation-Menu.md"
+            },
+            {
+              "text": "Forms & Validation",
+              "path": "UI/Blazor/Forms-Validation.md"
             },
             {
               "text": "Localization",
@@ -837,7 +899,7 @@
                 },
                 {
                   "text": "LeptonX Lite",
-                  "path": "Themes/LeptonXLite/blazor.md"
+                  "path": "Themes/LeptonXLite/Blazor.md"
                 },
                 {
                   "text": "Branding",
@@ -846,6 +908,10 @@
                 {
                   "text": "Page Header",
                   "path": "UI/Blazor/Page-Header.md"
+                },
+                {
+                  "text": "Page Layout",
+                  "path": "UI/Blazor/Page-Layout.md"
                 },
                 {
                   "text": "Toolbars",
@@ -892,6 +958,10 @@
                 {
                   "text": "Page Progress",
                   "path": "UI/Blazor/Page-Progress.md"
+                },
+                {
+                  "text": "Block/Busy",
+                  "path": "UI/Blazor/Block-Busy.md"
                 }
               ]
             },
@@ -931,6 +1001,10 @@
             {
               "text": "PWA Configuration",
               "path": "UI/Blazor/Pwa-Configuration.md"
+            },
+            {
+              "text": "Layout Hooks",
+              "path": "UI/Blazor/Layout-Hooks.md"
             }
           ]
         },
@@ -978,8 +1052,21 @@
                   "path": "UI/Angular/Authorization.md"
                 },
                 {
+                  "text": "Current User",
+                  "path": "UI/Angular/Current-User.md"
+                },
+                {
                   "text": "HTTP Requests",
-                  "path": "UI/Angular/HTTP-Requests.md"
+                  "items": [
+                    { 
+                      "text": "How to Make HTTP Requests",
+                      "path": "UI/Angular/HTTP-Requests.md"
+                    },
+                    { 
+                      "text": "Customize Error Handling",
+                      "path": "UI/Angular/HTTP-Error-Handling.md"
+                    }
+                  ]
                 },
                 {
                   "text": "Localization",
@@ -1011,7 +1098,7 @@
                 },
                 {
                   "text": "Account Module",
-                  "path": "UI/Angular/Account-Module"
+                  "path": "UI/Angular/Account-Module.md"
                 }
               ]
             },
@@ -1059,6 +1146,14 @@
                   "path": "UI/Angular/Loading-Directive.md"
                 },
                 {
+                  "text": "Show Password Directive",
+                  "path": "UI/Angular/Show-Password-Directive.md"
+                },
+                {
+                  "text": "Caps Lock Directive",
+                  "path": "UI/Angular/Caps-Lock-Directive.md"
+                },
+                {
                   "text": "Toast Overlay",
                   "path": "UI/Angular/Toaster-Service.md"
                 },
@@ -1069,6 +1164,10 @@
                 {
                   "text": "Ellipsis",
                   "path": "UI/Angular/Ellipsis-Directive.md"
+                },
+                {
+                  "text": "Projection Strategy",
+                  "path": "UI/Angular/Projection-Strategy.md"
                 },
                 {
                   "text": "Context Strategy",
@@ -1089,6 +1188,14 @@
                 {
                   "text": "Content Security Strategy",
                   "path": "UI/Angular/Content-Security-Strategy.md"
+                },
+                {
+                  "text": "Abp Window Service",
+                  "path": "UI/Angular/Abp-Window-Service.md"
+                },
+                {
+                  "text": "Title Strategy",
+                  "path": "UI/Angular/Title-Strategy-Service.md"
                 }
               ]
             },
@@ -1107,18 +1214,26 @@
                       "path": "UI/Angular/Theming.md"
                     },
                     {
+                      "text": "Configuration",
+                      "path": "UI/Angular/Theme-Configurations.md"
+                    },
+                    {
                       "text": "The Basic Theme",
                       "path": "UI/Angular/Basic-Theme.md"
                     },
                     {
                       "text": "LeptonX Lite",
-                      "path": "Themes/LeptonXLite/angular.md"
+                      "path": "Themes/LeptonXLite/Angular.md"
                     }
                   ]
                 },
                 {
                   "text": "Modifying the Menu",
                   "path": "UI/Angular/Modifying-the-Menu.md"
+                },
+                {
+                  "text": "Sorting Navigation Elements",
+                  "path": "UI/Angular/Sorting-Navigation-Elements.md"
                 },
                 {
                   "text": "Component Replacement",
@@ -1165,6 +1280,10 @@
                 {
                   "text": "Chart",
                   "path": "UI/Angular/Chart-Component.md"
+                },
+                {
+                  "text": "Card",
+                  "path": "UI/Angular/Card-Component.md"
                 }
               ]
             }
@@ -1182,6 +1301,10 @@
         {
           "text": "Common",
           "items": [
+            {
+              "text": "Themes",
+              "path": "Themes/Index.md"
+            },
             {
               "text": "Overriding the User Interface",
               "path": "Customizing-Application-Modules-Overriding-User-Interface.md"
@@ -1268,6 +1391,10 @@
       ]
     },
     {
+      "text": "Dapr Integration",
+      "path": "Dapr/Index.md"
+    },
+    {
       "text": "Testing",
       "path": "Testing.md"
     },
@@ -1276,8 +1403,28 @@
       "path": "Deployment/Index.md",
       "items": [
         {
+          "text": "Configuring SSL certificate(HTTPS)",
+          "path": "Deployment/SSL.md"
+        },
+        {
+          "text": "Configuring OpenIddict",
+          "path": "Deployment/Configuring-OpenIddict.md"
+        },
+        {
+          "text": "Configuring for Production",
+          "path": "Deployment/Configuring-Production.md"
+        },
+        {
           "text": "Deploying to a Clustered Environment",
           "path": "Deployment/Clustered-Environment.md"
+        },
+        {
+          "text": "Distributed / Microservice Solutions",
+          "path": "Deployment/Distributed-Microservice.md"
+        },
+        {
+          "text": "Optimizing for Production",
+          "path": "Deployment/Optimizing-Production.md"
         }
       ]
     },
@@ -1318,10 +1465,22 @@
         },
         {
           "text": "IdentityServer",
-          "path": "Modules/IdentityServer.md"
+          "path": "Modules/IdentityServer.md",
+          "items": [
+            {
+              "text": "IdentityServer Migration Guide",
+              "path": "Migration-Guides/IdentityServer4-Step-by-Step.md"
+            }
+          ]
         },
-		{
+        {
           "text": "OpenIddict",
+          "items": [
+            {
+              "text": "OpenIddict Migration Guide",
+              "path": "Migration-Guides/OpenIddict-Step-by-Step.md"
+            }
+          ],
           "path": "Modules/OpenIddict.md"
         },
         {
@@ -1339,6 +1498,15 @@
         {
           "text": "Virtual File Explorer",
           "path": "Modules/Virtual-File-Explorer.md"
+        },
+        {
+          "text": "Common",
+          "items": [
+            {
+              "text": "Database Tables",
+              "path": "Modules/Database-Tables.md"
+            }
+          ]
         }
       ]
     },
@@ -1404,6 +1572,10 @@
           "path": "Migration-Guides/Index.md"
         }
       ]
+    },
+    {
+      "text": "API Documentation",
+      "path": "{ApiDocumentationUrl}"
     },
     {
       "text": "Contribution Guide",

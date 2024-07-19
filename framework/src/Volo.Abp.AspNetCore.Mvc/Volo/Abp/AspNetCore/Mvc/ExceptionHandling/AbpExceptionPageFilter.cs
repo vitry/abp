@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.ExceptionHandling;
+using Volo.Abp.AspNetCore.Filters;
 using Volo.Abp.Authorization;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.ExceptionHandling;
@@ -18,14 +19,14 @@ using Volo.Abp.Json;
 
 namespace Volo.Abp.AspNetCore.Mvc.ExceptionHandling;
 
-public class AbpExceptionPageFilter : IAsyncPageFilter, ITransientDependency
+public class AbpExceptionPageFilter : IAsyncPageFilter, IAbpFilter, ITransientDependency
 {
     public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context)
     {
         return Task.CompletedTask;
     }
 
-    public async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
+    public virtual async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
     {
         if (context.HandlerMethod == null || !ShouldHandleException(context))
         {
@@ -36,7 +37,7 @@ public class AbpExceptionPageFilter : IAsyncPageFilter, ITransientDependency
         var pageHandlerExecutedContext = await next();
         if (pageHandlerExecutedContext.Exception == null)
         {
-            return; ;
+            return;
         }
 
         await HandleAndWrapException(pageHandlerExecutedContext);
@@ -47,7 +48,7 @@ public class AbpExceptionPageFilter : IAsyncPageFilter, ITransientDependency
         //TODO: Create DontWrap attribute to control wrapping..?
 
         if (context.ActionDescriptor.IsPageAction() &&
-            ActionResultHelper.IsObjectResult(context.HandlerMethod.MethodInfo.ReturnType, typeof(void)))
+            ActionResultHelper.IsObjectResult(context.HandlerMethod!.MethodInfo.ReturnType, typeof(void)))
         {
             return true;
         }
@@ -69,26 +70,31 @@ public class AbpExceptionPageFilter : IAsyncPageFilter, ITransientDependency
     {
         //TODO: Trigger an AbpExceptionHandled event or something like that.
 
+        if (context.ExceptionHandled)
+        {
+            return;
+        }
+
         var exceptionHandlingOptions = context.GetRequiredService<IOptions<AbpExceptionHandlingOptions>>().Value;
         var exceptionToErrorInfoConverter = context.GetRequiredService<IExceptionToErrorInfoConverter>();
-        var remoteServiceErrorInfo = exceptionToErrorInfoConverter.Convert(context.Exception, options =>
+        var remoteServiceErrorInfo = exceptionToErrorInfoConverter.Convert(context.Exception!, options =>
        {
            options.SendExceptionsDetailsToClients = exceptionHandlingOptions.SendExceptionsDetailsToClients;
            options.SendStackTraceToClients = exceptionHandlingOptions.SendStackTraceToClients;
        });
 
-        var logLevel = context.Exception.GetLogLevel();
+        var logLevel = context.Exception!.GetLogLevel();
 
         var remoteServiceErrorInfoBuilder = new StringBuilder();
         remoteServiceErrorInfoBuilder.AppendLine($"---------- {nameof(RemoteServiceErrorInfo)} ----------");
         remoteServiceErrorInfoBuilder.AppendLine(context.GetRequiredService<IJsonSerializer>().Serialize(remoteServiceErrorInfo, indented: true));
 
-        var logger = context.GetService<ILogger<AbpExceptionFilter>>(NullLogger<AbpExceptionFilter>.Instance);
+        var logger = context.GetService<ILogger<AbpExceptionPageFilter>>(NullLogger<AbpExceptionPageFilter>.Instance)!;
         logger.LogWithLevel(logLevel, remoteServiceErrorInfoBuilder.ToString());
 
-        logger.LogException(context.Exception, logLevel);
+        logger.LogException(context.Exception!, logLevel);
 
-        await context.GetRequiredService<IExceptionNotifier>().NotifyAsync(new ExceptionNotificationContext(context.Exception));
+        await context.GetRequiredService<IExceptionNotifier>().NotifyAsync(new ExceptionNotificationContext(context.Exception!));
 
         if (context.Exception is AbpAuthorizationException)
         {
@@ -100,11 +106,11 @@ public class AbpExceptionPageFilter : IAsyncPageFilter, ITransientDependency
             context.HttpContext.Response.Headers.Add(AbpHttpConsts.AbpErrorFormat, "true");
             context.HttpContext.Response.StatusCode = (int)context
                 .GetRequiredService<IHttpExceptionStatusCodeFinder>()
-                .GetStatusCode(context.HttpContext, context.Exception);
+                .GetStatusCode(context.HttpContext, context.Exception!);
 
             context.Result = new ObjectResult(new RemoteServiceErrorResponse(remoteServiceErrorInfo));
         }
 
-        context.Exception = null; //Handled!
+        context.ExceptionHandled = true; //Handled!
     }
 }

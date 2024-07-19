@@ -14,6 +14,7 @@ public partial class TokenController
     {
         // Retrieve the claims principal stored in the authorization code/device code/refresh token.
         var principal = (await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)).Principal;
+        principal = await AbpClaimsPrincipalFactory.CreateDynamicAsync(principal);
         using (CurrentTenant.Change(principal.FindTenantId()))
         {
             // Retrieve the user profile corresponding to the authorization code/refresh token.
@@ -33,7 +34,7 @@ public partial class TokenController
             }
 
             // Ensure the user is still allowed to sign in.
-            if (!await SignInManager.CanSignInAsync(user))
+            if (!await PreSignInCheckAsync(user))
             {
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -44,7 +45,7 @@ public partial class TokenController
                     }));
             }
 
-            await SetClaimsDestinationsAsync(principal);
+            await OpenIddictClaimsPrincipalManager.HandleAsync(request, principal);
 
             // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);

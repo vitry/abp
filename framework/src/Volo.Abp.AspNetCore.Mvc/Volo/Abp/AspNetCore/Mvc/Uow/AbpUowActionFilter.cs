@@ -4,12 +4,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Options;
+using Volo.Abp.AspNetCore.Filters;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Uow;
 
 namespace Volo.Abp.AspNetCore.Mvc.Uow;
 
-public class AbpUowActionFilter : IAsyncActionFilter, ITransientDependency
+public class AbpUowActionFilter : IAsyncActionFilter, IAbpFilter, ITransientDependency
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -67,7 +68,7 @@ public class AbpUowActionFilter : IAsyncActionFilter, ITransientDependency
         }
     }
 
-    private AbpUnitOfWorkOptions CreateOptions(ActionExecutingContext context, UnitOfWorkAttribute unitOfWorkAttribute)
+    private AbpUnitOfWorkOptions CreateOptions(ActionExecutingContext context, UnitOfWorkAttribute? unitOfWorkAttribute)
     {
         var options = new AbpUnitOfWorkOptions();
 
@@ -98,7 +99,15 @@ public class AbpUowActionFilter : IAsyncActionFilter, ITransientDependency
         var currentUow = unitOfWorkManager.Current;
         if (currentUow != null)
         {
-            await currentUow.SaveChangesAsync(context.HttpContext.RequestAborted);
+            try
+            {
+                await currentUow.SaveChangesAsync(context.HttpContext.RequestAborted);
+            }
+            catch (Exception e)
+            {
+                await currentUow.RollbackAsync(context.HttpContext.RequestAborted);
+                throw;
+            }
         }
     }
 

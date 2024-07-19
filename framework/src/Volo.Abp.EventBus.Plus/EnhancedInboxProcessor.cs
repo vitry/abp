@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.DistributedLocking;
-using Volo.Abp.EventBus.Boxes;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Threading;
 using Volo.Abp.Timing;

@@ -54,9 +54,9 @@ Assuming the `HelloWelcomeMessage` is localized as `Hello {0}, welcome!`, both o
 
 ## Other Properties & Methods
 
-### abp.localization.values
+### abp.localization.resources
 
-`abp.localization.values` property stores all the localization resources, keys and their values.
+`abp.localization.resources` property stores all the localization resources, keys and their values.
 
 ### abp.localization.isLocalized
 
@@ -141,3 +141,6 @@ Used to get list of all **available languages** in the application. An example v
 ]
 ````
 
+## See Also
+
+* [Video tutorial](https://abp.io/video-courses/essentials/localization)

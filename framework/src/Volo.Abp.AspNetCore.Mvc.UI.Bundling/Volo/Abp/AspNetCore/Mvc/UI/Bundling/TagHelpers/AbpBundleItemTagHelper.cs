@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 using Volo.Abp.AspNetCore.Mvc.UI.Bootstrap.TagHelpers;
 
 namespace Volo.Abp.AspNetCore.Mvc.UI.Bundling.TagHelpers;
@@ -10,12 +11,12 @@ public abstract class AbpBundleItemTagHelper<TTagHelper, TTagHelperService> : Ab
     /// <summary>
     /// A file path.
     /// </summary>
-    public string Src { get; set; }
+    public string? Src { get; set; }
 
     /// <summary>
     /// A bundle contributor type.
     /// </summary>
-    public Type Type { get; set; }
+    public Type? Type { get; set; }
 
     protected AbpBundleItemTagHelper(TTagHelperService service)
         : base(service)
@@ -26,7 +27,7 @@ public abstract class AbpBundleItemTagHelper<TTagHelper, TTagHelperService> : Ab
     {
         if (Type != null)
         {
-            return Type.FullName;
+            return Type.FullName!;
         }
 
         if (Src != null)
@@ -49,7 +50,7 @@ public abstract class AbpBundleItemTagHelper<TTagHelper, TTagHelperService> : Ab
 
         if (Src != null)
         {
-            return new BundleTagHelperFileItem(Src);
+            return new BundleTagHelperFileItem(new BundleFile(Src));
         }
 
         throw new AbpException("abp-script tag helper requires to set either src or type!");

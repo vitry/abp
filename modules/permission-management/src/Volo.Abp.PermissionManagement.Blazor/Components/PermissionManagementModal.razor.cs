@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Blazorise;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.Components.Web.Configuration;
+using Volo.Abp.Localization;
 using Volo.Abp.PermissionManagement.Localization;
 
 namespace Volo.Abp.PermissionManagement.Blazor.Components;
@@ -13,6 +15,8 @@ public partial class PermissionManagementModal
 {
     [Inject] protected IPermissionAppService PermissionAppService { get; set; }
     [Inject] protected ICurrentApplicationConfigurationCacheResetService CurrentApplicationConfigurationCacheResetService { get; set; }
+
+    [Inject] protected IOptions<AbpLocalizationOptions> LocalizationOptions { get; set; }
 
     protected Modal _modal;
 
@@ -28,6 +32,8 @@ public partial class PermissionManagementModal
 
     protected int _grantedPermissionCount = 0;
     protected int _notGrantedPermissionCount = 0;
+
+    protected bool _selectAllDisabled;
 
     protected bool GrantAll {
         get {
@@ -66,6 +72,8 @@ public partial class PermissionManagementModal
         }
     }
 
+    protected Dictionary<string, int> _permissionDepths = new Dictionary<string, int>();
+
     public PermissionManagementModal()
     {
         LocalizationResource = typeof(AbpPermissionManagementResource);
@@ -82,6 +90,8 @@ public partial class PermissionManagementModal
 
             _entityDisplayName = entityDisplayName ?? result.EntityDisplayName;
             _groups = result.Groups;
+
+            _selectAllDisabled = _groups.All(IsPermissionGroupDisabled);
 
             _grantedPermissionCount = 0;
             _notGrantedPermissionCount = 0;
@@ -105,6 +115,11 @@ public partial class PermissionManagementModal
 
             _selectedTabName = GetNormalizedGroupName(_groups.First().Name);
 
+            foreach (var group in _groups)
+            {
+                SetPermissionDepths(group.Permissions, null, 0);
+            }
+
             await InvokeAsync(_modal.Show);
         }
         catch (Exception ex)
@@ -122,7 +137,7 @@ public partial class PermissionManagementModal
     {
         try
         {
-            
+
             var updateDto = new UpdatePermissionsDto
             {
                 Permissions = _groups
@@ -130,7 +145,7 @@ public partial class PermissionManagementModal
                     .Select(p => new UpdatePermissionDto { IsGranted = p.IsGranted, Name = p.Name })
                     .ToArray()
             };
-            
+
             if (!updateDto.Permissions.Any(x => x.IsGranted))
             {
                 if (!await Message.Confirm(L["SaveWithoutAnyPermissionsWarningMessage"].Value))
@@ -144,6 +159,7 @@ public partial class PermissionManagementModal
             await CurrentApplicationConfigurationCacheResetService.ResetAsync();
 
             await InvokeAsync(_modal.Hide);
+            await Notify.Success(L["SavedSuccessfully"]);
         }
         catch (Exception ex)
         {
@@ -154,6 +170,23 @@ public partial class PermissionManagementModal
     protected virtual string GetNormalizedGroupName(string name)
     {
         return "PermissionGroup_" + name.Replace(".", "_");
+    }
+
+    protected virtual void SetPermissionDepths(List<PermissionGrantInfoDto> permissions, string currentParent, int currentDepth)
+    {
+        foreach (var item in permissions)
+        {
+            if (item.ParentName == currentParent)
+            {
+                _permissionDepths[item.Name] = currentDepth;
+                SetPermissionDepths(permissions, item.Name, currentDepth + 1);
+            }
+        }
+    }
+
+    protected virtual int GetPermissionDepthOrDefault(string name)
+    {
+        return _permissionDepths.GetValueOrDefault(name, 0);
     }
 
     protected virtual void GroupGrantAllChanged(bool value, PermissionGroupDto permissionGroup)
@@ -171,13 +204,11 @@ public partial class PermissionManagementModal
     {
         SetPermissionGrant(permission, value);
 
-        if (value && permission.ParentName != null)
+        if (value)
         {
-            var parentPermission = GetParentPermission(permissionGroup, permission);
-
-            SetPermissionGrant(parentPermission, true);
+            SetParentPermissionGrant(permissionGroup, permission);
         }
-        else if (value == false)
+        else
         {
             var childPermissions = GetChildPermissions(permissionGroup, permission);
 
@@ -186,6 +217,20 @@ public partial class PermissionManagementModal
                 SetPermissionGrant(childPermission, false);
             }
         }
+    }
+
+    private void SetParentPermissionGrant(PermissionGroupDto permissionGroup, PermissionGrantInfoDto permission)
+    {
+        if(permission.ParentName == null)
+        {
+            return;
+        }
+
+        var parentPermission = GetParentPermission(permissionGroup, permission);
+        SetPermissionGrant(parentPermission, true);
+
+        SetParentPermissionGrant(permissionGroup, parentPermission);
+
     }
 
     private void SetPermissionGrant(PermissionGrantInfoDto permission, bool value)
@@ -216,7 +261,25 @@ public partial class PermissionManagementModal
 
     protected List<PermissionGrantInfoDto> GetChildPermissions(PermissionGroupDto permissionGroup, PermissionGrantInfoDto permission)
     {
-        return permissionGroup.Permissions.Where(x => x.Name.StartsWith(permission.Name)).ToList();
+        var childPermissions = new List<PermissionGrantInfoDto>();
+        GetChildPermissions(childPermissions, permissionGroup.Permissions, permission);
+        return childPermissions;
+    }
+
+    protected void GetChildPermissions(List<PermissionGrantInfoDto> allChildPermissions, List<PermissionGrantInfoDto> permissions, PermissionGrantInfoDto permission)
+    {
+        var childPermissions = permissions.Where(x => x.ParentName == permission.Name).ToList();
+        if (childPermissions.Count == 0)
+        {
+            return;
+        }
+
+        allChildPermissions.AddRange(childPermissions);
+
+        foreach (var childPermission in childPermissions)
+        {
+            GetChildPermissions(allChildPermissions, permissions, childPermission);
+        }
     }
 
     protected bool IsDisabledPermission(PermissionGrantInfoDto permissionGrantInfo)
@@ -245,5 +308,13 @@ public partial class PermissionManagementModal
     {
         eventArgs.Cancel = eventArgs.CloseReason == CloseReason.FocusLostClosing;
         return Task.CompletedTask;
+    }
+
+    protected virtual bool IsPermissionGroupDisabled(PermissionGroupDto group)
+    {
+        var permissions = group.Permissions;
+        var grantedProviders = permissions.SelectMany(x => x.GrantedProviders);
+
+        return permissions.All(x => x.IsGranted) && grantedProviders.Any(p => p.ProviderName != _providerName);
     }
 }

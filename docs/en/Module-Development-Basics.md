@@ -20,7 +20,6 @@ public class BlogModule : AbpModule
 {
             
 }
-
 ````
 
 ### Configuring Dependency Injection & Other Modules
@@ -148,7 +147,7 @@ Lastly, you can override ``OnApplicationShutdown`` method if you want to execute
 
 ## Module Dependencies
 
-In a modular application, it's not unusual for one module to depend upon another module(s). An Abp module must declare ``[DependsOn]`` attribute if it does have a dependency upon another module, as shown below:
+In a modular application, it's not unusual for one module to depend upon another module(s). An ABP module must declare a ``[DependsOn]`` attribute if it does have a dependency upon another module, as shown below:
 
 ````C#
 [DependsOn(typeof(AbpAspNetCoreMvcModule))]
@@ -163,9 +162,33 @@ You can use multiple ``DependsOn`` attribute or pass multiple module types to a 
 
 A depended module may depend on another module, but you only need to define your direct dependencies. ABP investigates the dependency graph for the application at startup and initializes/shutdowns modules in the correct order.
 
+## Additional Module Assemblies
+
+ABP automatically registers all the services of your module to the [dependency injection](Dependency-Injection.md) system. It finds the service types by scanning types in the assembly that defines your module class. That assembly is considered as the main assembly of your module.
+
+Typically, every assembly contains a separate module class definition. Then modules depend on each other using the `DependsOn` attribute as explained in the previous section. However, in some rare cases, your module may consist of multiple assemblies, and only one of them defines a module class, and you want to make the other assemblies parts of your module. In that case, you can use the `AdditionalAssembly` attribute as shown below:
+
+````csharp
+[DependsOn(...)] // Your module dependencies as you normally do
+[AdditionalAssembly(typeof(BlogService))] // A type in the target assembly
+public class BlogModule
+{
+    //...
+}
+````
+
+In this example, we assume that the `BlogService` class is inside one assembly (`csproj`) and the `BlogModule` class is inside another assembly (`csproj`). With the `AdditionalAssembly` definition, ABP will load the assembly containing the `BlogService` class as a part of the blog module.
+
+Notice that `BlogService` is only an arbitrary selected type in the target assembly. It is just used to indicate the related assembly. You could use any type in the assembly.
+
+> WARNING: If you need to use the `AdditionalAssembly`, be sure that you don't design your system in a wrong way. With this example above, the `BlogService` class' assembly should normally have its own module class and the `BlogModule` should depend on it using the `DependsOn` attribute. Do not use the `AdditionalAssembly` attribute when you can already use the `DependsOn` attribute.
+
 ## Framework Modules vs Application Modules
 
 There are **two types of modules.** They don't have any structural difference but categorized by functionality and purpose:
 
 - **Framework modules**: These are **core modules of the framework** like caching, emailing, theming, security, serialization, validation, EF Core integration, MongoDB integration... etc. They do not have application/business functionalities but makes your daily development easier by providing common infrastructure, integration and abstractions.
 - **Application modules**: These modules implement **specific application/business functionalities** like blogging, document management, identity management, tenant management... etc. They generally have their own entities, services, APIs and UI components. See [pre-built application modules](Modules/Index.md).
+
+## See Also
+* [Video tutorial](https://abp.io/video-courses/essentials/modularity)

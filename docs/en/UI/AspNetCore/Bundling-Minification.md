@@ -12,27 +12,13 @@ ABP offers a simple, dynamic, powerful, modular and built-in way.
 
 > This package is already installed by default with the startup templates. So, most of the time, you don't need to install it manually.
 
-Install the `Volo.Abp.AspNetCore.Mvc.UI.Bundling` nuget package to your project:
+If you're not using a startup template, you can use the [ABP CLI](../../CLI.md) to install it to your project. Execute the following command in the folder that contains the .csproj file of your project:
 
 ````
-install-package Volo.Abp.AspNetCore.Mvc.UI.Bundling
+abp add-package Volo.Abp.AspNetCore.Mvc.UI.Bundling
 ````
 
-Then you can add the `AbpAspNetCoreMvcUiBundlingModule` dependency to your module:
-
-````C#
-using Volo.Abp.Modularity;
-using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
-
-namespace MyCompany.MyProject
-{
-    [DependsOn(typeof(AbpAspNetCoreMvcUiBundlingModule))]
-    public class MyWebModule : AbpModule
-    {
-        //...
-    }
-}
-````
+> If you haven't done it yet, you first need to install the [ABP CLI](../../CLI.md). For other installation options, see [the package description page](https://abp.io/package-detail/Volo.Abp.AspNetCore.Mvc.UI.Bundling).
 
 ## Razor Bundling Tag Helpers
 
@@ -308,28 +294,13 @@ Using the built-in contributors for standard packages;
 
 > This package is already installed by default in the startup templates. So, most of the time, you don't need to install it manually.
 
-Standard package contributors are defined in the `Volo.Abp.AspNetCore.Mvc.UI.Packages` NuGet package. 
-To install it to your project:
+If you're not using a startup template, you can use the [ABP CLI](../../CLI.md) to install it to your project. Execute the following command in the folder that contains the .csproj file of your project:
 
 ````
-install-package Volo.Abp.AspNetCore.Mvc.UI.Packages
+abp add-package Volo.Abp.AspNetCore.Mvc.UI.Packages
 ````
 
-Then add the `AbpAspNetCoreMvcUiPackagesModule` module dependency to your own module;
-
-````C#
-using Volo.Abp.Modularity;
-using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
-
-namespace MyCompany.MyProject
-{
-    [DependsOn(typeof(AbpAspNetCoreMvcUiPackagesModule))]
-    public class MyWebModule : AbpModule
-    {
-        //...
-    }
-}
-````
+> If you haven't done it yet, you first need to install the [ABP CLI](../../CLI.md). For other installation options, see [the package description page](https://abp.io/package-detail/Volo.Abp.AspNetCore.Mvc.UI.Packages).
 
 ### Bundle Inheritance
 
@@ -409,6 +380,83 @@ Configure<AbpBundlingOptions>(options =>
 <link rel="preload" href="/__bundles/Basic.Global.F4FA61F368098407A4C972D0A6914137.css?_v=637697363694828051" as="style" onload="this.rel='stylesheet'"/>
 
 <script defer src="/libs/timeago/locales/jquery.timeago.en.js?_v=637674729040000000"></script>
+````
+
+### External/CDN file Support
+
+The bundling system automatically recognizes the external/CDN files and adds them to the page without any change.
+
+#### Using External/CDN files in `AbpBundlingOptions`
+
+````csharp
+Configure<AbpBundlingOptions>(options =>
+{
+    options.StyleBundles
+        .Add("MyStyleBundle", configuration =>
+        {
+            configuration
+                .AddFiles("/styles/my-style1.css")
+                .AddFiles("/styles/my-style2.css")
+                .AddFiles("https://cdn.abp.io/bootstrap.css")
+                .AddFiles("/styles/my-style3.css")
+                .AddFiles("/styles/my-style4.css");
+        });
+
+    options.ScriptBundles
+        .Add("MyScriptBundle", configuration =>
+        {
+            configuration
+                .AddFiles("/scripts/my-script1.js")
+                .AddFiles("/scripts/my-script2.js")
+                .AddFiles("https://cdn.abp.io/bootstrap.js")
+                .AddFiles("/scripts/my-script3.js")
+                .AddFiles("/scripts/my-script4.js");
+        });
+});
+````
+
+**Output HTML:**
+
+````html
+<link rel="stylesheet" href="/__bundles/MyStyleBundle.EA8C28419DCA43363E9670973D4C0D15.css?_v=638331889644609730" />
+<link rel="stylesheet" href="https://cdn.abp.io/bootstrap.css" />
+<link rel="stylesheet" href="/__bundles/MyStyleBundle.AC2E0AA6C461A0949A1295E9BDAC049C.css?_v=638331889644623860" />
+
+<script src="/__bundles/MyScriptBundle.C993366DF8840E08228F3EE685CB08E8.js?_v=638331889644937120"></script>
+<script src="https://cdn.abp.io/bootstrap.js"></script>
+<script src="/__bundles/MyScriptBundle.2E8D0FDC6334D2A6B847393A801525B7.js?_v=638331889644943970"></script>
+````
+
+#### Using External/CDN files in Tag Helpers.
+
+````html
+<abp-style-bundle name="MyStyleBundle">
+    <abp-style src="/styles/my-style1.css" />
+    <abp-style src="/styles/my-style2.css" />
+    <abp-style src="https://cdn.abp.io/bootstrap.css" />
+    <abp-style src="/styles/my-style3.css" />
+    <abp-style src="/styles/my-style4.css" />
+</abp-style-bundle>
+
+<abp-script-bundle name="MyScriptBundle">
+    <abp-script src="/scripts/my-script1.js" />
+    <abp-script src="/scripts/my-script2.js" />
+    <abp-script src="https://cdn.abp.io/bootstrap.js" />
+    <abp-script src="/scripts/my-script3.js" />
+    <abp-script src="/scripts/my-script4.js" />
+</abp-script-bundle>
+````
+
+**Output HTML:**
+
+````html
+<link rel="stylesheet" href="/__bundles/MyStyleBundle.C60C7B9C1F539659623BB6E7227A7C45.css?_v=638331889645002500" />
+<link rel="stylesheet" href="https://cdn.abp.io/bootstrap.css" />
+<link rel="stylesheet" href="/__bundles/MyStyleBundle.464328A06039091534650B0E049904C6.css?_v=638331889645012300" />
+
+<script src="/__bundles/MyScriptBundle.55FDCBF2DCB9E0767AE6FA7487594106.js?_v=638331889645050410"></script>
+<script src="https://cdn.abp.io/bootstrap.js"></script>
+<script src="/__bundles/MyScriptBundle.191CB68AB4F41C8BF3A7AE422F19A3D2.js?_v=638331889645055490"></script>
 ````
 
 ## Themes

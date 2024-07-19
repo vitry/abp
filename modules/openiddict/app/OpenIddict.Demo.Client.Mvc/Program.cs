@@ -1,4 +1,5 @@
 using IdentityModel;
+using OpenIddict.Demo.Client.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -16,22 +17,18 @@ builder.Services.AddAuthentication(options =>
     {
         options.ExpireTimeSpan = TimeSpan.FromDays(365);
     })
-    .AddOpenIdConnect("oidc", options =>
+    .AddAbpOpenIdConnect("oidc", options =>
     {
         options.Authority = "https://localhost:44301/";
+        options.RequireHttpsMetadata = true;
+        options.ResponseType = OidcConstants.ResponseTypes.Code;
 
         options.ClientId = "AbpApp";
         options.ClientSecret = "1q2w3e*";
 
-        options.RequireHttpsMetadata = true;
-        options.GetClaimsFromUserInfoEndpoint = true;
-        options.SaveTokens = true;
-
         options.UsePkce = true;
-
-        options.ResponseType = OidcConstants.ResponseTypes.Code;
-
-        options.SignOutScheme = "Cookies";
+        options.SaveTokens = true;
+        options.GetClaimsFromUserInfoEndpoint = true;
 
         options.Scope.Add("email");
         options.Scope.Add("roles");
@@ -39,7 +36,9 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("AbpAPI");
     });
 
+await builder.AddApplicationAsync<OpenIddictMvcModule>();
 var app = builder.Build();
+await app.InitializeApplicationAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -51,12 +50,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.MapRazorPages();
-
+app.UseConfiguredEndpoints();
 app.Run();

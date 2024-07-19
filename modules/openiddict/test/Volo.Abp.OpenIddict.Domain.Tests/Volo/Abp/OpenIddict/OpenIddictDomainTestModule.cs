@@ -1,5 +1,6 @@
 ﻿using Volo.Abp.OpenIddict.EntityFrameworkCore;
 using Volo.Abp.Modularity;
+using Volo.Abp.PermissionManagement.OpenIddict;
 
 namespace Volo.Abp.OpenIddict;
 
@@ -8,7 +9,8 @@ namespace Volo.Abp.OpenIddict;
  * database independent anyway.
  */
 [DependsOn(
-    typeof(OpenIddictEntityFrameworkCoreTestModule)
+    typeof(OpenIddictEntityFrameworkCoreTestModule),
+    typeof(AbpPermissionManagementDomainOpenIddictModule)
     )]
 public class OpenIddictDomainTestModule : AbpModule
 {

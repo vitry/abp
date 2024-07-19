@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Volo.Abp.Data;
 using Volo.Abp.Json.SystemTextJson.JsonConverters;
@@ -19,9 +18,11 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
 
     }
 
-    private static string SerializeObject(ExtraPropertyDictionary extraProperties, Type entityType)
+    public readonly static JsonSerializerOptions SerializeOptions = new JsonSerializerOptions();
+
+    private static string SerializeObject(ExtraPropertyDictionary extraProperties, Type? entityType)
     {
-        var copyDictionary = new Dictionary<string, object>(extraProperties);
+        var copyDictionary = new Dictionary<string, object?>(extraProperties);
 
         if (entityType != null)
         {
@@ -38,10 +39,10 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
             }
         }
 
-        return JsonSerializer.Serialize(copyDictionary);
+        return JsonSerializer.Serialize(copyDictionary, SerializeOptions);
     }
 
-    private static readonly JsonSerializerOptions DeserializeOptions = new JsonSerializerOptions()
+    public readonly static JsonSerializerOptions DeserializeOptions = new JsonSerializerOptions()
     {
         Converters =
         {
@@ -49,7 +50,7 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
         }
     };
 
-    private static ExtraPropertyDictionary DeserializeObject(string extraPropertiesAsJson, Type entityType)
+    private static ExtraPropertyDictionary DeserializeObject(string extraPropertiesAsJson, Type? entityType)
     {
         if (extraPropertiesAsJson.IsNullOrEmpty() || extraPropertiesAsJson == "{}")
         {
@@ -66,7 +67,7 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
             {
                 foreach (var property in objectExtension.GetProperties())
                 {
-                    dictionary[property.Name] = GetNormalizedValue(dictionary, property);
+                    dictionary[property.Name] = GetNormalizedValue(dictionary!, property);
                 }
             }
         }
@@ -74,7 +75,7 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
         return dictionary;
     }
 
-    private static object GetNormalizedValue(
+    private static object? GetNormalizedValue(
         Dictionary<string, object> dictionary,
         ObjectExtensionPropertyInfo property)
     {
@@ -88,7 +89,7 @@ public class ExtraPropertiesValueConverter : ValueConverter<ExtraPropertyDiction
         {
             if (property.Type.IsEnum)
             {
-                return Enum.Parse(property.Type, value.ToString(), true);
+                return Enum.Parse(property.Type, value.ToString()!, true);
             }
 
             //return Convert.ChangeType(value, property.Type);

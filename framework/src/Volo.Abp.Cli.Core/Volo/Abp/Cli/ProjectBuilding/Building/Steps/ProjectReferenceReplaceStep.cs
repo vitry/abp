@@ -73,6 +73,7 @@ public class ProjectReferenceReplaceStep : ProjectBuildPipelineStep
         private readonly List<FileEntry> _entries;
         private readonly bool _isMicroserviceServiceTemplate;
         private readonly string _projectName;
+        protected bool CentralPackageManagement { get; }
 
         protected ProjectReferenceReplacer(
             ProjectBuildContext context,
@@ -81,6 +82,7 @@ public class ProjectReferenceReplaceStep : ProjectBuildPipelineStep
             _entries = context.Files;
             _isMicroserviceServiceTemplate = MicroserviceServiceTemplateBase.IsMicroserviceServiceTemplate(context.Template?.Name);
             _projectName = projectName;
+            CentralPackageManagement = context.Files.Any(x => x.Name.EndsWith("Directory.Packages.props"));
         }
 
         public void Run()
@@ -117,12 +119,13 @@ public class ProjectReferenceReplaceStep : ProjectBuildPipelineStep
                 var oldNodeIncludeValue = oldNode.Attributes["Include"].Value;
 
                 // ReSharper disable once PossibleNullReferenceException : Can not be null because nodes are selected with include attribute filter in previous method
-                if (oldNodeIncludeValue.Contains(_projectName))
+                if (oldNodeIncludeValue.Contains(_projectName) && _isMicroserviceServiceTemplate)
                 {
-                    if (_isMicroserviceServiceTemplate || _entries.Any(e => e.Name.EndsWith(GetProjectNameWithExtensionFromProjectReference(oldNodeIncludeValue))))
-                    {
-                        continue;
-                    }
+                    continue;
+                }
+                if(_entries.Any(e => e.Name.EndsWith(GetProjectNameWithExtensionFromProjectReference(oldNodeIncludeValue))))
+                {
+                    continue;
                 }
 
                 XmlNode newNode = GetNewReferenceNode(doc, oldNodeIncludeValue);
@@ -164,7 +167,7 @@ public class ProjectReferenceReplaceStep : ProjectBuildPipelineStep
                 includeAttr.Value = ConvertToNugetReference(oldNodeIncludeValue);
                 newNode.Attributes.Append(includeAttr);
 
-                var versionAttr = doc.CreateAttribute("Version");
+                var versionAttr = doc.CreateAttribute(CentralPackageManagement ? "VersionOverride" : "Version");
                 versionAttr.Value = _nugetPackageVersion;
                 newNode.Attributes.Append(versionAttr);
                 return newNode;

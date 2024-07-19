@@ -12,7 +12,7 @@ public class UserAppService : ApplicationService
         _userRepository = userRepository;
     }
 
-    public void CreateUser(CreateUserInput input)
+    public async Task CreateUser(CreateUserInput input)
     {
         //Manually creating a User object from the CreateUserInput object
         var user = new User
@@ -23,7 +23,7 @@ public class UserAppService : ApplicationService
             Password = input.Password
         };
 
-        _userRepository.Insert(user);
+        await _userRepository.InsertAsync(user);
     }
 }
 ```
@@ -46,12 +46,12 @@ public class UserAppService : ApplicationService
         _userRepository = userRepository;
     }
 
-    public void CreateUser(CreateUserInput input)
+    public async Task CreateUser(CreateUserInput input)
     {
         //Automatically creating a new User object using the CreateUserInput object
         var user = ObjectMapper.Map<CreateUserInput, User>(input);
 
-        _userRepository.Insert(user);
+        await _userRepository.InsertAsync(user);
     }
 }
 ````
@@ -320,9 +320,22 @@ public class MyCustomUserMapper : IObjectMapper<User, UserDto>, ITransientDepend
 }
 ````
 
-ABP automatically discovers and registers the `MyCustomUserMapper` and it is automatically used whenever you use the `IObjectMapper` to map `User` to `UserDto`.
-
-A single class may implement more than one `IObjectMapper<TSource, TDestination>` each for a different object pairs.
+ABP automatically discovers and registers the `MyCustomUserMapper` and it is automatically used whenever you use the `IObjectMapper` to map `User` to `UserDto`. A single class may implement more than one `IObjectMapper<TSource, TDestination>` each for a different object pairs.
 
 > This approach is powerful since `MyCustomUserMapper` can inject any other service and use in the `Map` methods.
 
+Once you implement `IObjectMapper<User, UserDto>`, ABP can automatically convert a collection of `User` objects to a collection of `UserDto` objects. The following generic collection types are supported:
+
+* `IEnumerable<T>`
+* `ICollection<T>`
+* `Collection<T>`
+* `IList<T>`
+* `List<T>`
+* `T[]` (array)
+
+**Example:**
+
+````csharp
+var users = await _userRepository.GetListAsync(); // returns List<User>
+var dtos = ObjectMapper.Map<List<User>, List<UserDto>>(users); // creates List<UserDto>
+````

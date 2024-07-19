@@ -1,6 +1,6 @@
 # Multi-Tenancy
 
-Multi-Tenancy is a widely used architecture to create **SaaS applications** where the hardware and software **resources are shared by the customers** (tenants). ABP Framework provides all the base functionalities to create **multi tenant applications**. 
+Multi-Tenancy is a widely used architecture to create **SaaS applications** where the hardware and software **resources are shared by the customers** (tenants). ABP Framework provides all the base functionalities to create **multi tenant applications**.
 
 Wikipedia [defines](https://en.wikipedia.org/wiki/Multitenancy) the multi-tenancy as like that:
 
@@ -10,8 +10,8 @@ Wikipedia [defines](https://en.wikipedia.org/wiki/Multitenancy) the multi-tenanc
 
 There are two main side of a typical SaaS / Multi-tenant application:
 
-* A **Tenant** is a customer of the SaaS application that pays money to use the service.
-* **Host** is the company that owns the SaaS application and manages the system.
+- A **Tenant** is a customer of the SaaS application that pays money to use the service.
+- **Host** is the company that owns the SaaS application and manages the system.
 
 The Host and the Tenant terms will be used for that purpose in the rest of the document.
 
@@ -36,9 +36,9 @@ Configure<AbpMultiTenancyOptions>(options =>
 
 ABP Framework supports all the following approaches to store the tenant data in the database;
 
-* **Single Database**: All tenants are stored in a single database.
-* **Database per Tenant**: Every tenant has a separate, dedicated database to store the data related to that tenant.
-* **Hybrid**: Some tenants share a single databases while some tenants may have their own databases.
+- **Single Database**: All tenants are stored in a single database.
+- **Database per Tenant**: Every tenant has a separate, dedicated database to store the data related to that tenant.
+- **Hybrid**: Some tenants share a single database while some tenants may have their own databases.
 
 [Tenant management module](Modules/Tenant-Management.md) (which comes pre-installed with the startup projects) allows you to set a connection string for any tenant (as optional), so you can achieve any of the approaches.
 
@@ -48,11 +48,11 @@ Multi-tenancy system is designed to **work seamlessly** and make your applicatio
 
 ### IMultiTenant
 
-You should implement the `IMultiTenant` interface for your [entities](Entities.md) to make them **multi-tenancy ready**. 
+You should implement the `IMultiTenant` interface for your [entities](Entities.md) to make them **multi-tenancy ready**.
 
-**Example: A multi-tenant *Product* entity**
+**Example: A multi-tenant _Product_ entity**
 
-````csharp
+```csharp
 using System;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.MultiTenancy;
@@ -68,7 +68,7 @@ namespace MultiTenancyDemo.Products
         public float Price { get; set; }
     }
 }
-````
+```
 
 `IMultiTenant` interface just defines a `TenantId` property. When you implement this interface, ABP Framework **automatically** [filters](Data-Filtering.md) entities for the current tenant when you query from database. So, you don't need to manually add `TenantId` condition while performing queries. A tenant can not access to data of another tenant by default.
 
@@ -96,9 +96,9 @@ If you set the `TenantId` value for a specific entity object, it will override t
 
 `ICurrentTenant` defines the following properties;
 
-* `Id` (`Guid`): Id of the current tenant. Can be `null` if the current user is a host user or the tenant could not be determined from the request.
-* `Name` (`string`): Name of the current tenant. Can be `null` if the current user is a host user or the tenant could not be determined from the request.
-* `IsAvailable` (`bool`): Returns `true` if the `Id` is not `null`.
+- `Id` (`Guid`): Id of the current tenant. Can be `null` if the current user is a host user or the tenant could not be determined from the request.
+- `Name` (`string`): Name of the current tenant. Can be `null` if the current user is a host user or the tenant could not be determined from the request.
+- `IsAvailable` (`bool`): Returns `true` if the `Id` is not `null`.
 
 #### Change the Current Tenant
 
@@ -108,7 +108,7 @@ ABP Framework automatically filters the resources (database, cache...) based on 
 
 **Example: Get product count of a specific tenant**
 
-````csharp
+```csharp
 using System;
 using System.Threading.Tasks;
 using Volo.Abp.Domain.Repositories;
@@ -134,11 +134,11 @@ namespace MultiTenancyDemo.Products
         }
     }
 }
-````
+```
 
-* `Change` method can be used in a **nested way**. It restores the `CurrentTenant.Id` to the previous value after the `using` statement.
-* When you use `CurrentTenant.Id` inside the `Change` scope, you get the `tenantId` provided to the `Change` method. So, the repository also get this `tenantId` and can filter the database query accordingly.
-* Use `CurrentTenant.Change(null)` to change scope to the host context.
+- `Change` method can be used in a **nested way**. It restores the `CurrentTenant.Id` to the previous value after the `using` statement.
+- When you use `CurrentTenant.Id` inside the `Change` scope, you get the `tenantId` provided to the `Change` method. So, the repository also get this `tenantId` and can filter the database query accordingly.
+- Use `CurrentTenant.Change(null)` to change scope to the host context.
 
 > Always use the `Change` method with a `using` statement like done in this example.
 
@@ -148,7 +148,7 @@ As mentioned before, ABP Framework handles data isolation between tenants using 
 
 **Example: Get count of products in the database, including all the products of all the tenants.**
 
-````csharp
+```csharp
 using System;
 using System.Threading.Tasks;
 using Volo.Abp.Data;
@@ -181,7 +181,7 @@ namespace MultiTenancyDemo.Products
     }
 }
 
-````
+```
 
 See the [Data Filtering document](Data-Filtering.md) for more.
 
@@ -201,16 +201,15 @@ ABP Framework provides an extensible **Tenant Resolving** system for that purpos
 
 The following resolvers are provided and configured by default;
 
-* `CurrentUserTenantResolveContributor`: Gets the tenant id from claims of the current user, if the current user has logged in. **This should always be the first contributor for the security**.
-* `QueryStringTenantResolveContributor`: Tries to find current tenant id from query string parameters. The parameter name is `__tenant` by default.
-* `FormTenantResolveContributor`：Tries to find current tenant id from form parameters. The parameter name is `__tenant` by default.
-* `RouteTenantResolveContributor`: Tries to find current tenant id from route (URL path). The variable name is `__tenant` by default. If you defined a route with this variable, then it can determine the current tenant from the route.
-* `HeaderTenantResolveContributor`: Tries to find current tenant id from HTTP headers. The header name is `__tenant` by default.
-* `CookieTenantResolveContributor`: Tries to find current tenant id from cookie values. The cookie name is `__tenant` by default.
+- `CurrentUserTenantResolveContributor`: Gets the tenant id from claims of the current user, if the current user has logged in. **This should always be the first contributor for the security**.
+- `QueryStringTenantResolveContributor`: Tries to find current tenant id from query string parameters. The parameter name is `__tenant` by default.
+- `RouteTenantResolveContributor`: Tries to find current tenant id from route (URL path). The variable name is `__tenant` by default. If you defined a route with this variable, then it can determine the current tenant from the route.
+- `HeaderTenantResolveContributor`: Tries to find current tenant id from HTTP headers. The header name is `__tenant` by default.
+- `CookieTenantResolveContributor`: Tries to find current tenant id from cookie values. The cookie name is `__tenant` by default.
 
 ###### Problems with the NGINX
 
-You may have problems with the `__tenant` in the HTTP Headers if you're using the [nginx](https://www.nginx.com/) as the reverse proxy server. Because it doesn't allow to use underscore and some other special characters in the HTTP headers and you may need to manually configure it. See the following documents please: 
+You may have problems with the `__tenant` in the HTTP Headers if you're using the [nginx](https://www.nginx.com/) as the reverse proxy server. Because it doesn't allow to use underscore and some other special characters in the HTTP headers and you may need to manually configure it. See the following documents please:
 http://nginx.org/en/docs/http/ngx_http_core_module.html#ignore_invalid_headers
 http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers
 
@@ -220,22 +219,24 @@ http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers
 
 **Example:**
 
-````csharp
+```csharp
 services.Configure<AbpAspNetCoreMultiTenancyOptions>(options =>
 {
     options.TenantKey = "MyTenantKey";
 });
-````
+```
 
-If you change the `TenantKey`, make sure to pass it to `CoreModule` in the Angular client as follows:
+If you change the `TenantKey`, make sure to pass it to `provideAbpCore` via `withOptions` method in the Angular client as follows:
 
 ```js
 @NgModule({
-  imports: [
-    CoreModule.forRoot({
-      // ...
-      tenantKey: 'MyTenantKey'
-    }),
+  providers: [
+    provideAbpCore(
+      withOptions({
+        // ...
+        tenantKey: "MyTenantKey",
+      })
+    ),
   ],
   // ...
 })
@@ -250,44 +251,115 @@ import { TENANT_KEY } from '@abp/ng.core';
 
 class SomeComponent {
     constructor(@Inject(TENANT_KEY) private tenantKey: string) {}
-} 
+}
 ```
 
 > However, we don't suggest to change this value since some clients may assume the the `__tenant` as the parameter name and they might need to manually configure then.
 
+The `MultiTenancyMiddlewareErrorPageBuilder` is used to handle inactive and non-existent tenants.
+
+It will respond to an error page by default, you can change it if you want, eg: only output the error log and continue ASP NET Core's request pipeline.
+
+```csharp
+Configure<AbpAspNetCoreMultiTenancyOptions>(options =>
+{
+    options.MultiTenancyMiddlewareErrorPageBuilder = async (context, exception) =>
+    {
+        // Handle the exception.
+
+        // Return true to stop the pipeline, false to continue.
+        return true;
+    };
+});
+```
+
 ##### Domain/Subdomain Tenant Resolver
 
-In a real application, most of times you will want to determine current tenant either by subdomain (like mytenant1.mydomain.com) or by the whole domain (like mytenant.com). If so, you can configure the `AbpTenantResolveOptions` to add the domain tenant resolver.
+In a real application, most of times you will want to determine the current tenant either by subdomain (like mytenant1.mydomain.com) or by the whole domain (like mytenant.com). If so, you can configure the `AbpTenantResolveOptions` to add the domain tenant resolver.
 
 **Example: Add a subdomain resolver**
 
-````csharp
+```csharp
 Configure<AbpTenantResolveOptions>(options =>
 {
     options.AddDomainTenantResolver("{0}.mydomain.com");
 });
-````
+```
 
-* `{0}` is the placeholder to determine current tenant's unique name.
-* Add this code to the `ConfigureServices` method of your [module](Module-Development-Basics.md).
-* This should be done in the *Web/API Layer* since the URL is a web related stuff.
+- `{0}` is the placeholder to determine the current tenant's unique name.
+- Add this code to the `ConfigureServices` method of your [module](Module-Development-Basics.md).
+- This should be done in the _Web/API Layer_ since the URL is a web related stuff.
 
-> There is an [example](https://github.com/abpframework/abp-samples/tree/master/DomainTenantResolver) that uses the subdomain to determining the current tenant. 
+Openiddict is the default Auth Server in ABP (since v6.0). When you use OpenIddict, you must add this code to the `PreConfigure` method as well.
+
+```csharp
+// using Volo.Abp.OpenIddict.WildcardDomains
+
+PreConfigure<AbpOpenIddictWildcardDomainOptions>(options =>
+{
+    options.EnableWildcardDomainSupport = true;
+    options.WildcardDomainsFormat.Add("https://{0}.mydomain.com");
+});
+```
+
+You must add this code to the `Configure` method as well.
+
+```csharp
+// using Volo.Abp.MultiTenancy;
+
+Configure<AbpTenantResolveOptions>(options =>
+{
+    options.AddDomainTenantResolver("{0}.mydomain.com");
+});
+
+```
+
+> There is an [example](https://github.com/abpframework/abp-samples/tree/master/DomainTenantResolver) that uses the subdomain to determine the current tenant.
+
+If you use a sepereted Auth server, you must install `[Owl.TokenWildcardIssuerValidator](https://www.nuget.org/packages/Owl.TokenWildcardIssuerValidator)` on the `HTTPApi.Host` project
+
+```bash
+dotnet add package Owl.TokenWildcardIssuerValidator
+```
+
+Then fix the options of the `.AddJwtBearer` block
+
+```csharp
+// using using Owl.TokenWildcardIssuerValidator;
+
+context.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = configuration["AuthServer:Authority"];
+        options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
+        options.Audience = "ExampleProjectName";
+
+        // start of added  block
+        options.TokenValidationParameters.IssuerValidator = TokenWildcardIssuerValidator.IssuerValidator;
+        options.TokenValidationParameters.ValidIssuers = new[]
+        {
+            "https://{0}.mydomain.com:44349/" //the port may different
+        };
+        // end of added  block
+    });
+
+```
 
 ##### Custom Tenant Resolvers
 
 You can add implement your custom tenant resolver and configure the `AbpTenantResolveOptions` in your module's `ConfigureServices` method as like below:
 
-````csharp
+```csharp
 Configure<AbpTenantResolveOptions>(options =>
 {
     options.TenantResolvers.Add(new MyCustomTenantResolveContributor());
 });
-````
+```
 
 `MyCustomTenantResolveContributor` must inherit from the `TenantResolveContributorBase` (or implement the `ITenantResolveContributor`) as shown below:
 
-````csharp
+```csharp
 using System.Threading.Tasks;
 using Volo.Abp.MultiTenancy;
 
@@ -303,10 +375,10 @@ namespace MultiTenancyDemo.Web
         }
     }
 }
-````
+```
 
-* A tenant resolver should set `context.TenantIdOrName` if it can determine it. If not, just leave it as is to allow the next resolver to determine it.
-* `context.ServiceProvider` can be used if you need to additional services to resolve from the [dependency injection](Dependency-Injection.md) system.
+- A tenant resolver should set `context.TenantIdOrName` if it can determine it. If not, just leave it as is to allow the next resolver to determine it.
+- `context.ServiceProvider` can be used if you need to additional services to resolve from the [dependency injection](Dependency-Injection.md) system.
 
 #### Multi-Tenancy Middleware
 
@@ -314,15 +386,17 @@ Multi-Tenancy middleware is an ASP.NET Core request pipeline [middleware](https:
 
 Multi-Tenancy middleware is typically placed just under the [authentication](https://docs.microsoft.com/en-us/aspnet/core/security/authentication) middleware (`app.UseAuthentication()`):
 
-````csharp
+```csharp
 app.UseMultiTenancy();
-````
+```
 
 > This middleware is already configured in the startup templates, so you normally don't need to manually add it.
 
 ### Tenant Store
 
 `ITenantStore` is used to get the tenant configuration from a data source.
+
+> Tenant names are not case-sensitive. `ITenantStore` will use the `NormalizedName` parameter to get tenants, You need to use `ITenantNormalizer` to normalize tenant names.
 
 #### Tenant Management Module
 
@@ -334,21 +408,23 @@ The [tenant management module](Modules/Tenant-Management) is **included in the s
 
 **Example: Define tenants in appsettings.json**
 
-````json
+```json
 "Tenants": [
     {
       "Id": "446a5211-3d72-4339-9adc-845151f8ada0",
-      "Name": "tenant1"
+      "Name": "tenant1",
+      "NormalizedName": "TENANT1"
     },
     {
       "Id": "25388015-ef1c-4355-9c18-f6b6ddbaf89d",
       "Name": "tenant2",
+      "NormalizedName": "TENANT2",
       "ConnectionStrings": {
         "Default": "...tenant2's db connection string here..."
       }
     }
   ]
-````
+```
 
 > It is recommended to **use the Tenant Management module**, which is already pre-configured when you create a new application with the ABP startup templates.
 
@@ -366,4 +442,4 @@ The [Tenant Management module](Modules/Tenant-Management.md) provides a basic UI
 
 ## See Also
 
-* [Features](Features.md)
+- [Features](Features.md)

@@ -35,6 +35,7 @@ using Volo.Abp.Account;
 using Volo.Abp.PermissionManagement.HttpApi;
 using Volo.Abp.Validation.Localization;
 using Volo.Docs.Documents.FullSearch.Elastic;
+using Volo.Abp.Caching.StackExchangeRedis;
 
 namespace VoloDocs.Web
 {
@@ -57,6 +58,7 @@ namespace VoloDocs.Web
         typeof(AbpPermissionManagementApplicationModule),
         typeof(AbpPermissionManagementHttpApiModule),
         typeof(AbpAspNetCoreMvcUiBasicThemeModule)
+        ,typeof(AbpCachingStackExchangeRedisModule)
     )]
     public class VoloDocsWebModule : AbpModule
     {
@@ -73,10 +75,13 @@ namespace VoloDocs.Web
             var hostingEnvironment = context.Services.GetHostingEnvironment();
             var configuration = context.Services.GetConfiguration();
 
-            Configure<DocsUiOptions>(options =>
-            {
-                options.RoutePrefix = null;
-            });
+            // Configure<DocsUiOptions>(options =>
+            // {
+            //     options.RoutePrefix = null;
+            //     options.SingleProjectMode.Enable = true;
+            //     options.SingleProjectMode.ProjectName = "abp";
+            //     options.MultiLanguageMode = false;
+            // });
 
             Configure<DocsElasticSearchOptions>(options =>
             {
@@ -132,14 +137,15 @@ namespace VoloDocs.Web
                 options.Languages.Add(new LanguageInfo("pt-BR", "pt-BR", "Português"));
                 options.Languages.Add(new LanguageInfo("fi", "fi", "Finnish"));
                 options.Languages.Add(new LanguageInfo("fr", "fr", "Français"));
-                options.Languages.Add(new LanguageInfo("hi", "hi", "Hindi", "in"));
-                options.Languages.Add(new LanguageInfo("is", "is", "Icelandic", "is"));
-                options.Languages.Add(new LanguageInfo("it", "it", "Italiano", "it"));
+                options.Languages.Add(new LanguageInfo("hi", "hi", "Hindi"));
+                options.Languages.Add(new LanguageInfo("is", "is", "Icelandic"));
+                options.Languages.Add(new LanguageInfo("it", "it", "Italiano"));
                 options.Languages.Add(new LanguageInfo("hu", "hu", "Magyar"));
                 options.Languages.Add(new LanguageInfo("ro-RO", "ro-RO", "Română"));
                 options.Languages.Add(new LanguageInfo("sk", "sk", "Slovak"));
                 options.Languages.Add(new LanguageInfo("tr", "tr", "Türkçe"));
                 options.Languages.Add(new LanguageInfo("zh-Hans", "zh-Hans", "简体中文"));
+                options.Languages.Add(new LanguageInfo("el", "el", "Ελληνικά"));
 
                 options.Resources
                     .Get<DocsResource>()
@@ -156,6 +162,11 @@ namespace VoloDocs.Web
             Configure<RazorPagesOptions>(options =>
             {
                 options.Conventions.AddPageRoute("/Error", "error/{statusCode}");
+            });
+
+            Configure<DocsWebGoogleTranslationOptions>(options =>
+            {
+                options.UseGoogleTranslation = true;
             });
         }
 

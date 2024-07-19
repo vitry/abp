@@ -31,16 +31,29 @@ public partial class SettingManagement
 
     protected async override Task OnInitializedAsync()
     {
+        BreadcrumbItems.Add(new BreadcrumbItem(@L["Settings"]));
+
         SettingComponentCreationContext = new SettingComponentCreationContext(ServiceProvider);
 
         foreach (var contributor in Options.Contributors)
         {
             await contributor.ConfigureAsync(SettingComponentCreationContext);
         }
-
+        SettingComponentCreationContext.Normalize();
         SettingItemRenders.Clear();
 
         SelectedGroup = GetNormalizedString(SettingComponentCreationContext.Groups.First().Id);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Yield();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     protected virtual string GetNormalizedString(string value)

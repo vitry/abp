@@ -18,7 +18,7 @@ public static class BackgroundJobsDbContextModelCreatingExtensions
 
         builder.Entity<BackgroundJobRecord>(b =>
         {
-            b.ToTable(BackgroundJobsDbProperties.DbTablePrefix + "BackgroundJobs", BackgroundJobsDbProperties.DbSchema);
+            b.ToTable(AbpBackgroundJobsDbProperties.DbTablePrefix + "BackgroundJobs", AbpBackgroundJobsDbProperties.DbSchema);
 
             b.ConfigureByConvention();
 
@@ -28,7 +28,7 @@ public static class BackgroundJobsDbContextModelCreatingExtensions
             b.Property(x => x.NextTryTime);
             b.Property(x => x.LastTryTime);
             b.Property(x => x.IsAbandoned).HasDefaultValue(false);
-            b.Property(x => x.Priority).HasDefaultValue(BackgroundJobPriority.Normal);
+            b.Property(x => x.Priority).HasDefaultValue(BackgroundJobPriority.Normal).HasSentinel(BackgroundJobPriority.Normal);
 
             b.HasIndex(x => new { x.IsAbandoned, x.NextTryTime });
 

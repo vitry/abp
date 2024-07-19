@@ -7,24 +7,11 @@ This document explains how to integrate EF Core as an ORM provider to ABP based 
 `Volo.Abp.EntityFrameworkCore` is the main NuGet package for the EF Core integration. Install it to your project (for a layered application, to your data/infrastructure layer):
 
 ```` shell
-Install-Package Volo.Abp.EntityFrameworkCore
+abp add-package Volo.Abp.EntityFrameworkCore
 ````
 
-Then add `AbpEntityFrameworkCoreModule` module dependency (`DependsOn` attribute) to your [module](Module-Development-Basics.md):
-
-````c#
-using Volo.Abp.EntityFrameworkCore;
-using Volo.Abp.Modularity;
-
-namespace MyCompany.MyProject
-{
-    [DependsOn(typeof(AbpEntityFrameworkCoreModule))]
-    public class MyModule : AbpModule
-    {
-        //...
-    }
-}
-````
+> If you haven't done it yet, you first need to install the [ABP CLI](CLI.md). For other installation options, see [the package description page](https://abp.io/package-detail/Volo.Abp.EntityFrameworkCore).
+>
 
 > Note: Instead, you can directly download a [startup template](https://abp.io/Templates) with EF Core pre-installed.
 
@@ -149,6 +136,30 @@ Configure<AbpDbContextOptions>(options =>
     {
         opts.DbContextOptions.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
     });
+});
+````
+
+Add actions for the `ConfigureConventions` and `OnModelCreating` methods of the `DbContext` as shown below:
+
+````csharp
+options.DefaultConventionAction = (dbContext, builder) =>
+{
+    // This action is called for ConfigureConventions method of all DbContexts.
+};
+
+options.ConfigureConventions<YourDbContext>((dbContext, builder) =>
+{
+    // This action is called for ConfigureConventions method of specific DbContext.
+});
+
+options.DefaultOnModelCreatingAction = (dbContext, builder) =>
+{
+    // This action is called for OnModelCreating method of all DbContexts.
+};
+
+options.ConfigureOnModelCreating<YourDbContext>((dbContext, builder) =>
+{
+    // This action is called for OnModelCreating method of specific DbContext.
 });
 ````
 
@@ -607,6 +618,18 @@ Whenever you access to a property/collection, EF Core automatically performs an 
 
 See also [lazy loading document](https://docs.microsoft.com/en-us/ef/core/querying/related-data/lazy) of the EF Core.
 
+## Read-Only Repositories
+
+ABP Framework provides read-only [repository](Repositories.md) interfaces (`IReadOnlyRepository<...>` or `IReadOnlyBasicRepository<...>`) to explicitly indicate that your purpose is to query data, but not change it. If so, you can inject these interfaces into your services.
+
+Entity Framework Core read-only repository implementation uses [EF Core's No-Tracking feature](https://learn.microsoft.com/en-us/ef/core/querying/tracking#no-tracking-queries). That means the entities returned from the repository will not be tracked by the EF Core [change tracker](https://learn.microsoft.com/en-us/ef/core/change-tracking/), because it is expected that you won't update entities queried from a read-only repository. If you need to track the entities, you can still use the [AsTracking()](https://learn.microsoft.com/en-us/dotnet/api/microsoft.entityframeworkcore.entityframeworkqueryableextensions.astracking) extension method on the LINQ expression, or `EnableTracking()` extension method on the repository object (See *Enabling / Disabling the Change Tracking* section in this document).
+
+> This behavior works only if the repository object is injected with one of the read-only repository interfaces (`IReadOnlyRepository<...>` or `IReadOnlyBasicRepository<...>`). It won't work if you have injected a standard repository (e.g. `IRepository<...>`) then casted it to a read-only repository interface.
+
+## Enabling / Disabling the Change Tracking
+
+In addition to the read-only repositories, ABP allows to manually control the change tracking behavior for querying objects. Please see the *Enabling / Disabling the Change Tracking* section of the [Repositories documentation](Repositories.md) to learn how to use it.
+
 ## Access to the EF Core API
 
 In most cases, you want to hide EF Core APIs behind a repository (this is the main purpose of the repository pattern). However, if you want to access the `DbContext` instance over the repository, you can use `GetDbContext()` or `GetDbSet()` extension methods. Example:
@@ -730,6 +753,8 @@ public static class QADbContextModelCreatingExtensions
 
 > If you call `ConfigureByConvention()` extension method (like `b.ConfigureByConvention()` for this example), ABP Framework internally calls the `ConfigureObjectExtensions` and `ConfigureEfCoreEntity` methods. It is a **best practice** to use the `ConfigureByConvention()` method since it also configures database mapping for base properties by convention.
 
+> The `Object Extension` feature need the `Change Tracking`, which means you can't use the read-only repositories for the entities that have `extension properties(MapEfCoreProperty)`, Please see the [Repositories documentation](Repositories.md) to learn the change tracking behavior.
+
 See the "*ConfigureByConvention Method*" section above for more information.
 
 ## Advanced Topics
@@ -834,7 +859,7 @@ One advantage of using an interface for a DbContext is then it will be replaceab
 
 Once you properly define and use an interface for DbContext, then any other implementation can use the following ways to replace it:
 
-**ReplaceDbContextAttribute**
+#### ReplaceDbContext Attribute
 
 ```csharp
 [ReplaceDbContext(typeof(IBookStoreDbContext))]
@@ -844,7 +869,7 @@ public class OtherDbContext : AbpDbContext<OtherDbContext>, IBookStoreDbContext
 }
 ```
 
-**ReplaceDbContext option**
+#### ReplaceDbContext Option
 
 ````csharp
 context.Services.AddAbpDbContext<OtherDbContext>(options =>
@@ -855,6 +880,22 @@ context.Services.AddAbpDbContext<OtherDbContext>(options =>
 ````
 
 In this example, `OtherDbContext` implements `IBookStoreDbContext`. This feature allows you to have multiple DbContext (one per module) on development, but single DbContext (implements all interfaces of all DbContexts) on runtime.
+
+#### Replacing with Multi-Tenancy
+
+It is also possible to replace a DbContext based on the [multi-tenancy](Multi-Tenancy.md) side. `ReplaceDbContext` attribute and  `ReplaceDbContext` method can get a `MultiTenancySides` option with a default value of `MultiTenancySides.Both`.
+
+**Example:** Replace DbContext only for tenants, using the `ReplaceDbContext` attribute
+
+````csharp
+[ReplaceDbContext(typeof(IBookStoreDbContext), MultiTenancySides.Tenant)]
+````
+
+**Example:** Replace DbContext only for the host side, using the `ReplaceDbContext` method
+
+````csharp
+options.ReplaceDbContext<IBookStoreDbContext>(MultiTenancySides.Host);
+````
 
 ### Split Queries
 
@@ -921,3 +962,4 @@ public class MyCustomEfCoreBulkOperationProvider
 
 * [Entities](Entities.md)
 * [Repositories](Repositories.md)
+* [Video tutorial](https://abp.io/video-courses/essentials/abp-ef-core)

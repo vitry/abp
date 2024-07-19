@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.RequestLocalization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Volo.Abp.AspNetCore.Middleware;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Localization;
 using Volo.Abp.MultiTenancy;
@@ -13,8 +16,10 @@ using Volo.Abp.Settings;
 
 namespace Volo.Abp.AspNetCore.MultiTenancy;
 
-public class MultiTenancyMiddleware : IMiddleware, ITransientDependency
+public class MultiTenancyMiddleware : AbpMiddlewareBase, ITransientDependency
 {
+    public ILogger<MultiTenancyMiddleware> Logger { get; set; }
+
     private readonly ITenantConfigurationProvider _tenantConfigurationProvider;
     private readonly ICurrentTenant _currentTenant;
     private readonly AbpAspNetCoreMultiTenancyOptions _options;
@@ -26,23 +31,29 @@ public class MultiTenancyMiddleware : IMiddleware, ITransientDependency
         IOptions<AbpAspNetCoreMultiTenancyOptions> options,
         ITenantResolveResultAccessor tenantResolveResultAccessor)
     {
+        Logger = NullLogger<MultiTenancyMiddleware>.Instance;
+
         _tenantConfigurationProvider = tenantConfigurationProvider;
         _currentTenant = currentTenant;
         _tenantResolveResultAccessor = tenantResolveResultAccessor;
         _options = options.Value;
     }
 
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    public async override Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        TenantConfiguration tenant;
+        TenantConfiguration? tenant = null;
         try
         {
             tenant = await _tenantConfigurationProvider.GetAsync(saveResolveResult: true);
         }
         catch (Exception e)
         {
-            await _options.MultiTenancyMiddlewareErrorPageBuilder(context, e);
-            return;
+            Logger.LogException(e);
+
+            if (await _options.MultiTenancyMiddlewareErrorPageBuilder(context, e))
+            {
+                return;
+            }
         }
 
         if (tenant?.Id != _currentTenant.Id)
@@ -76,7 +87,7 @@ public class MultiTenancyMiddleware : IMiddleware, ITransientDependency
         }
     }
 
-    private async Task<RequestCulture> TryGetRequestCultureAsync(HttpContext httpContext)
+    private async Task<RequestCulture?> TryGetRequestCultureAsync(HttpContext httpContext)
     {
         var requestCultureFeature = httpContext.Features.Get<IRequestCultureFeature>();
 
@@ -104,7 +115,7 @@ public class MultiTenancyMiddleware : IMiddleware, ITransientDependency
         string culture;
         string uiCulture;
 
-        if (defaultLanguage.Contains(';'))
+        if (defaultLanguage!.Contains(';'))
         {
             var splitted = defaultLanguage.Split(';');
             culture = splitted[0];
@@ -116,6 +127,12 @@ public class MultiTenancyMiddleware : IMiddleware, ITransientDependency
             uiCulture = defaultLanguage;
         }
 
-        return new RequestCulture(culture, uiCulture);
+        if (CultureHelper.IsValidCultureCode(culture) &&
+            CultureHelper.IsValidCultureCode(uiCulture))
+        {
+            return new RequestCulture(culture, uiCulture);
+        }
+
+        return null;
     }
 }

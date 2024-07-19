@@ -9,7 +9,7 @@ While you can continue to use the standard [Bootstrap way](https://getbootstrap.
 ABP Framework provides the following benefits for such a modal with a form inside it;
 
 * **Lazy loads** the modal HTML into the page and **removes** it from the DOM once its closed. This makes easy to consume a reusable modal dialog. Also, every time you open the modal, it will be a fresh new modal, so you don't have to deal with resetting the modal content.
-* **Auto-focuses** the first input of the form once the modal has been opened.
+* **Auto-focuses** the first input of the form once the modal has been opened. You can also specify it using a `function` or `jquery selector`.
 * Automatically determines the **form** inside a modal and posts the form via **AJAX** instead of normal page post.
 * Automatically checks if the form inside the modal **has changed, but not saved**. It warns the user in this case.
 * Automatically **disables the modal buttons** (save & cancel) until the AJAX operation completes.
@@ -186,7 +186,7 @@ For this example, creating a new Razor Page, named `ProductCreateModal.cshtml`, 
 ````
 
 * The `abp-modal` has been wrapped by the `form`. This is needed to place the `Save` and the `Cancel` buttons into the form. In this way, the `Save` button acts as the `submit` button for the `form`.
-* Used the [abp-input tag helpers](Tag-Helpers/Form-Elements.md) to simplify to create the form elements. Otherwise, you need to write more HTML.
+* Used the [abp-input tag helpers](Tag-Helpers/Form-elements.md) to simplify to create the form elements. Otherwise, you need to write more HTML.
 
 **ProductCreateModal.cshtml.cs Content:**
 
@@ -247,7 +247,7 @@ namespace MyProject.Web.Pages.Products
 }
 ````
 
-* `abp-input` Tag Helper can understand the data annotation attributes and uses them to shape and validate the form elements. See the [abp-input tag helpers](Tag-Helpers/Form-Elements.md) document to learn more.
+* `abp-input` Tag Helper can understand the data annotation attributes and uses them to shape and validate the form elements. See the [abp-input tag helpers](Tag-Helpers/Form-elements.md) document to learn more.
 
 #### Defining the Modal Manager
 
@@ -429,6 +429,7 @@ Here, the list of all available options;
 * `viewUrl` (required, `string`): The URL to lazy load the HTML of the modal.
 * `scriptUrl` (optional, `string`): A URL to lazy load a JavaScript file. It is loaded only once, when the modal first opened.
 * `modalClass` (optional, `string`): A JavaScript class defined in the `abp.modals` namespace that can be used to execute code related to the modal.
+* `focusElement` (optional, `function or string`): Specifies the element that gets focus.
 
 ### Functions
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -52,16 +53,23 @@ namespace Volo.Docs.Admin
 
         [HttpPut]
         [Route("RemoveDocumentFromCache")]
-        public async Task RemoveFromCacheAsync(Guid documentId)
+        public virtual async Task RemoveFromCacheAsync(Guid documentId)
         {
             await _documentAdminAppService.RemoveFromCacheAsync(documentId);
         }
 
         [HttpPut]
         [Route("ReindexDocument")]
-        public async Task ReindexAsync(Guid documentId)
+        public virtual async Task ReindexAsync(Guid documentId)
         {
             await _documentAdminAppService.ReindexAsync(documentId);
+        }
+
+        [HttpGet]
+        [Route("GetFilterItems")]
+        public virtual async Task<List<DocumentInfoDto>> GetFilterItemsAsync()
+        {
+            return await _documentAdminAppService.GetFilterItemsAsync();
         }
     }
 }

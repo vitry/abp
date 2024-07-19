@@ -1,5 +1,6 @@
 ﻿@page "/setting-management"
 @using Microsoft.AspNetCore.Authorization
+@using Volo.Abp.AspNetCore.Components.Web.Theming.Layout
 @using Volo.Abp.Features
 @attribute [Authorize]
 @attribute [RequiresFeature(SettingManagementFeatures.Enable)]
@@ -23,10 +24,8 @@
             <Content>
                 @foreach (var group in SettingComponentCreationContext.Groups)
                 {
-                    <TabPanel Name="@GetNormalizedString(group.Id)">
-                        <h2>@group.DisplayName</h2>
-                        <Divider />
-
+                    <TabPanel Name="@GetNormalizedString(group.Id)" class="abp-md-form">
+                       
                         @{
                             SettingItemRenders.Add(builder =>
                             {

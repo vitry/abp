@@ -1,6 +1,7 @@
 {
   "culture": "cs",
   "texts": {
+    "Volo.Abp.TenantManagement:DuplicateTenantName": "Jméno nájemce již existuje: {Name}",
     "Menu:TenantManagement": "Správa tenantů",
     "Tenants": "Tenanty",
     "NewTenant": "Nový tenant",
@@ -10,7 +11,6 @@
     "ConnectionStrings": "Connection stringy",
     "DisplayName:DefaultConnectionString": "Výchozí connection string",
     "DisplayName:UseSharedDatabase": "Použít sdílenou databázi",
-    "ManageHostFeatures": "Správa funkcí hostitele",
     "Permission:TenantManagement": "Správa tenantů",
     "Permission:Create": "Vytvořit",
     "Permission:Edit": "Upravit",

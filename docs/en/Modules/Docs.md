@@ -22,23 +22,19 @@ When you use GitHub to store your docs, Docs Module supports versioning. If you 
 
 ## Installation
 
-### 1- Download
+This document covers `Entity Framework Core` provider but you can also select `MongoDB` as your database provider.
 
-If you do not have an existing ABP project, this step shows you how to create a new project from [abp.io](https://abp.io) to add the Docs Module. If you already have an ABP project, you can skip this step.
+### 1- Creating an application
 
-It is recommended to use ABP CLI to create new projects. Use the following command:
+If you do not have an existing ABP project, you can either [generate a CLI command from the get started page of the abp.io website](https://abp.io/get-started) and runs it or run the command below:
 
-`abp new Acme.MyProject`
-
-You can also navigate to https://abp.io/get-started. Enter your project name as `Acme.MyProject`, other use default options.
-
-Note that this document covers `Entity Framework Core` provider but you can also select `MongoDB` as your database provider.
-
-![Create new project](../images/docs-module_download-new-abp-project.png)
+```bash
+abp new Acme.MyProject
+```
 
 ### 2- Running The Empty Application
 
-After you download the project, extract the ZIP file and open `Acme.MyProject.sln`. You will see that the solution consists of `Application`, `Application.Contracts`, `DbMigrator`, `Domain`, `Domain.Shared`, `EntityFrameworkCore`, `HttpApi`, `HttpApi.Client` and `Web` projects. Right click on `Acme.MyProject.Web` project and **Set as StartUp Project**.
+After you created the project, open `Acme.MyProject.sln`. You will see that the solution consists of `Application`, `Application.Contracts`, `DbMigrator`, `Domain`, `Domain.Shared`, `EntityFrameworkCore`, `HttpApi`, `HttpApi.Client` and `Web` projects. Right click on `Acme.MyProject.Web` project and **Set as StartUp Project**.
 
 ![Create a new project](../images/docs-module_solution-explorer.png)
 
@@ -66,7 +62,9 @@ Docs module packages are hosted on NuGet. There are 4 packages that needs be to 
 
 It is recommended to use the ABP CLI to install the module, open the CMD window in the solution file (`.sln`) directory, and run the following command:
 
-`abp add-module Volo.Docs`
+```bash
+abp add-module Volo.Docs
+```
 
 #### 3.2- Manually install
 
@@ -74,19 +72,27 @@ Or you can also manually install nuget package to each project:
 
 * Install [Volo.Docs.Domain](https://www.nuget.org/packages/Volo.Docs.Domain/) nuget package to `Acme.MyProject.Domain` project.
 
-  `Install-Package Volo.Docs.Domain`
+  ```bash
+  Install-Package Volo.Docs.Domain
+  ```
 
 * Install [Volo.Docs.EntityFrameworkCore](https://www.nuget.org/packages/Volo.Docs.EntityFrameworkCore/) nuget package to `Acme.MyProject.EntityFrameworkCore` project.
 
-  `Install-Package Volo.Docs.EntityFrameworkCore`
+  ```bash
+  Install-Package Volo.Docs.EntityFrameworkCore
+  ```
 
 * Install [Volo.Docs.Application](https://www.nuget.org/packages/Volo.Docs.Application/) nuget package to `Acme.MyProject.Application` project.
 
-  `Install-Package Volo.Docs.Application`
+  ```bash
+  Install-Package Volo.Docs.Application
+  ```
 
 * Install [Volo.Docs.Web](https://www.nuget.org/packages/Volo.Docs.Domain/) nuget package to `Acme.MyProject.Web` project.
 
-  `Install-Package Volo.Docs.Web`
+  ```bash
+  Install-Package Volo.Docs.Web
+  ```
 
 ##### 3.2.1- Adding Module Dependencies
 
@@ -258,7 +264,7 @@ If you choose Entity Framework as your database provider, you need to configure 
 
 The default route for Docs module is;
 
-```
+```txt
 /Documents
 ```
 
@@ -307,7 +313,7 @@ The new menu item for Docs Module is added to the menu. Run your web application
 
 You will see a warning says;
 
-```
+```txt
 There are no projects yet!
 ```
 
@@ -326,7 +332,7 @@ Open `DocsProjects` in your database, and insert a new record with the following
 * **DocumentStoreType**: The source of the documents (for GitHub:`GitHub`, for file system`FileSystem`)
 * **ExtraProperties**: A serialized `JSON` that stores special configuration for the selected `DocumentStoreType`. 
 * **MainWebsiteUrl**: The URL when user clicks to the logo of the Docs module page. You can simply set as `/` to link to your website root address.
-* **LatestVersionBranchName**: This is a config for GitHub. It's the branch name which to retrieve the docs. You can set it as `master`.
+* **LatestVersionBranchName**: This is a config for GitHub. It's the branch name which to retrieve the docs. You can set it as `dev`.
 
 #### Sample Project Record for "GitHub"
 
@@ -361,7 +367,7 @@ You can use [ABP Framework](https://github.com/abpframework/abp/) GitHub documen
 For `SQL` databases, you can use the below `T-SQL` command to insert the specified sample into your `DocsProjects` table:
 
 ```mssql
-INSERT [dbo].[DocsProjects] ([Id], [Name], [ShortName], [Format], [DefaultDocumentName], [NavigationDocumentName], [MinimumVersion], [DocumentStoreType], [ExtraProperties], [MainWebsiteUrl], [LatestVersionBranchName], [ParametersDocumentName]) VALUES (N'12f21123-e08e-4f15-bedb-ae0b2d939658', N'ABP framework (GitHub)', N'abp', N'md', N'Index', N'docs-nav.json', NULL, N'GitHub', N'{"GitHubRootUrl":"https://github.com/abpframework/abp/tree/{version}/docs","GitHubAccessToken":"***","GitHubUserAgent":""}', N'/', N'dev', N'')
+INSERT [dbo].[DocsProjects] ([Id], [Name], [ShortName], [Format], [DefaultDocumentName], [NavigationDocumentName], [MinimumVersion], [DocumentStoreType], [ExtraProperties], [MainWebsiteUrl], [LatestVersionBranchName], [ParametersDocumentName], [ConcurrencyStamp]) VALUES (N'12f21123-e08e-4f15-bedb-ae0b2d939658', N'ABP framework (GitHub)', N'abp', N'md', N'Index', N'docs-nav.json', NULL, N'GitHub', N'{"GitHubRootUrl":"https://github.com/abpframework/abp/tree/{version}/docs","GitHubAccessToken":"","GitHubUserAgent":""}', N'/', N'dev', N'', N'12f21123e08e4f15bedbae0b2d939659')
 ```
 
 Be aware that `GitHubAccessToken` is masked. It's a private token and you must get your own token and replace the `***` string.
@@ -396,12 +402,12 @@ You can use [ABP Framework](https://github.com/abpframework/abp/) GitHub documen
 
 - MainWebsiteUrl: `/`
 
-- LatestVersionBranchName: `<NULL>`
+- LatestVersionBranchName: `latest`
 
 For `SQL` databases, you can use the below `T-SQL` command to insert the specified sample into your `DocsProjects` table:
 
 ```mssql
-INSERT [dbo].[DocsProjects] ([Id], [Name], [ShortName], [Format], [DefaultDocumentName], [NavigationDocumentName], [MinimumVersion], [DocumentStoreType], [ExtraProperties], [MainWebsiteUrl], [LatestVersionBranchName], [ParametersDocumentName]) VALUES (N'12f21123-e08e-4f15-bedb-ae0b2d939659', N'ABP framework (FileSystem)', N'abp', N'md', N'Index', N'docs-nav.json', NULL, N'FileSystem', N'{"Path":"C:\\Github\\abp\\docs"}', N'/', NULL, N'')
+INSERT [dbo].[DocsProjects] ([Id], [Name], [ShortName], [Format], [DefaultDocumentName], [NavigationDocumentName], [MinimumVersion], [DocumentStoreType], [ExtraProperties], [MainWebsiteUrl], [LatestVersionBranchName], [ParametersDocumentName], [ConcurrencyStamp]) VALUES (N'12f21123-e08e-4f15-bedb-ae0b2d939659', N'ABP framework (FileSystem)', N'abp', N'md', N'Index', N'docs-nav.json', NULL, N'FileSystem', N'{"Path":"C:\\Github\\abp\\docs"}', N'/', N'latest', N'', N'12f21123e08e4f15bedbae0b2d939659')
 ```
 
 Add one of the sample projects above and run the application. In the menu you will see `Documents` link, click the menu link to open the documents page. 
@@ -487,14 +493,14 @@ For example [Getting-Started.md](https://github.com/abpio/abp-commercial-docs/bl
 ```
 .....
 
-​````json
+​```json
 //[doc-params]
 {
     "UI": ["MVC","NG"],
     "DB": ["EF", "Mongo"],
     "Tiered": ["Yes", "No"]
 }
-​````
+​```
 
 ........
 ```
@@ -530,9 +536,9 @@ For example:
 
 You can also use variables in a text, adding **_Value** postfix to its key:
 
-````
+```txt
 This document assumes that you prefer to use **{{ UI_Value }}** as the UI framework and **{{ DB_Value }}** as the database provider.
-````
+```
 
 Also, **Document_Language_Code** and **Document_Version** keys are pre-defined if you want to get the language code or the version of the current document (This may be useful for creating links that redirects to another documentation system in another domain).
 
@@ -603,7 +609,7 @@ Finally a new Docs Module is added to your project which is feeded with GitHub.
 
 The Docs module supports full-text search using Elastic Search. It is not enabled by default. You can configure `DocsElasticSearchOptions` to enable it.
 
-```
+```csharp
 Configure<DocsElasticSearchOptions>(options =>
 {
     options.Enable = true;
@@ -616,7 +622,7 @@ The `Index` is automatically created after the application starts if the `Index`
 `DefaultElasticClientProvider` is responsible for creating `IElasticClient`. By default, it reads Elastic Search's `Url` from `IConfiguration`.
 If your `IElasticClient` needs additional configuration, please use override `IElasticClientProvider` service and replace it in the [dependency injection](../Dependency-Injection.md) system.
 
-```
+```json
 {
   "ElasticSearch": {
     "Url": "http://localhost:9200"

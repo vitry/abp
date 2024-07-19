@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -15,85 +16,78 @@ namespace Volo.Abp.Caching.StackExchangeRedis;
 [DisableConventionalRegistration]
 public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
 {
-    protected static readonly string SetScript;
     protected static readonly string AbsoluteExpirationKey;
     protected static readonly string SlidingExpirationKey;
     protected static readonly string DataKey;
     protected static readonly long NotPresent;
+    protected static readonly RedisValue[] HashMembersAbsoluteExpirationSlidingExpirationData;
+    protected static readonly RedisValue[] HashMembersAbsoluteExpirationSlidingExpiration;
 
-    private static readonly FieldInfo RedisDatabaseField;
-    private static readonly MethodInfo ConnectMethod;
-    private static readonly MethodInfo ConnectAsyncMethod;
-    private static readonly MethodInfo MapMetadataMethod;
-    private static readonly MethodInfo GetAbsoluteExpirationMethod;
-    private static readonly MethodInfo GetExpirationInSecondsMethod;
+    private readonly static FieldInfo SetScriptField;
+    private readonly static FieldInfo RedisDatabaseField;
+    private readonly static MethodInfo ConnectMethod;
+    private readonly static MethodInfo ConnectAsyncMethod;
+    private readonly static MethodInfo MapMetadataMethod;
+    private readonly static MethodInfo GetAbsoluteExpirationMethod;
+    private readonly static MethodInfo GetExpirationInSecondsMethod;
+    private readonly static MethodInfo OnRedisErrorMethod;
 
-    protected IDatabase RedisDatabase => GetRedisDatabase();
-    private IDatabase _redisDatabase;
-
-    protected string Instance { get; }
+    protected RedisKey InstancePrefix { get; }
 
     static AbpRedisCache()
     {
         var type = typeof(RedisCache);
 
-        RedisDatabaseField = type.GetField("_cache", BindingFlags.Instance | BindingFlags.NonPublic);
+        RedisDatabaseField = Check.NotNull(type.GetField("_cache", BindingFlags.Instance | BindingFlags.NonPublic), nameof(RedisDatabaseField));
 
-        ConnectMethod = type.GetMethod("Connect", BindingFlags.Instance | BindingFlags.NonPublic);
+        SetScriptField = Check.NotNull(type.GetField("_setScript", BindingFlags.Instance | BindingFlags.NonPublic), nameof(SetScriptField));
+        
+        ConnectMethod = Check.NotNull(type.GetMethod("Connect", BindingFlags.Instance | BindingFlags.NonPublic), nameof(ConnectMethod));
 
-        ConnectAsyncMethod = type.GetMethod("ConnectAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        ConnectAsyncMethod = Check.NotNull(type.GetMethod("ConnectAsync", BindingFlags.Instance | BindingFlags.NonPublic), nameof(ConnectAsyncMethod));
 
-        MapMetadataMethod = type.GetMethod("MapMetadata", BindingFlags.Instance | BindingFlags.NonPublic);
+        MapMetadataMethod = Check.NotNull(type.GetMethod("MapMetadata", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static), nameof(MapMetadataMethod));
 
-        GetAbsoluteExpirationMethod =
-            type.GetMethod("GetAbsoluteExpiration", BindingFlags.Static | BindingFlags.NonPublic);
+        GetAbsoluteExpirationMethod = Check.NotNull(type.GetMethod("GetAbsoluteExpiration", BindingFlags.Static | BindingFlags.NonPublic), nameof(GetAbsoluteExpirationMethod));
 
-        GetExpirationInSecondsMethod =
-            type.GetMethod("GetExpirationInSeconds", BindingFlags.Static | BindingFlags.NonPublic);
+        GetExpirationInSecondsMethod = Check.NotNull(type.GetMethod("GetExpirationInSeconds", BindingFlags.Static | BindingFlags.NonPublic), nameof(GetExpirationInSecondsMethod));
+        
+        OnRedisErrorMethod = Check.NotNull(type.GetMethod("OnRedisError", BindingFlags.Instance | BindingFlags.NonPublic), nameof(OnRedisErrorMethod));
 
-        SetScript = type.GetField("SetScript", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null)
-            .ToString();
+        AbsoluteExpirationKey = type.GetField("AbsoluteExpirationKey", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.ToString()!;
 
-        AbsoluteExpirationKey = type.GetField("AbsoluteExpirationKey", BindingFlags.Static | BindingFlags.NonPublic)
-            ?.GetValue(null).ToString();
+        SlidingExpirationKey = type.GetField("SlidingExpirationKey", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.ToString()!;
 
-        SlidingExpirationKey = type.GetField("SlidingExpirationKey", BindingFlags.Static | BindingFlags.NonPublic)
-            ?.GetValue(null).ToString();
+        DataKey = type.GetField("DataKey", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.ToString()!;
 
-        DataKey = type.GetField("DataKey", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null).ToString();
-
-        // ReSharper disable once PossibleNullReferenceException
-        NotPresent = type.GetField("NotPresent", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null)
-            .To<int>();
+        NotPresent = type.GetField("NotPresent", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.To<int>();
+        
+        HashMembersAbsoluteExpirationSlidingExpirationData = [AbsoluteExpirationKey, SlidingExpirationKey, DataKey];
+        
+        HashMembersAbsoluteExpirationSlidingExpiration = [AbsoluteExpirationKey, SlidingExpirationKey];
     }
 
     public AbpRedisCache(IOptions<RedisCacheOptions> optionsAccessor)
         : base(optionsAccessor)
     {
-        Instance = optionsAccessor.Value.InstanceName ?? string.Empty;
-    }
-
-    protected virtual void Connect()
-    {
-        if (GetRedisDatabase() != null)
+        var instanceName = optionsAccessor.Value.InstanceName;
+        if (!string.IsNullOrEmpty(instanceName))
         {
-            return;
+            InstancePrefix = (RedisKey)Encoding.UTF8.GetBytes(instanceName);
         }
-
-        ConnectMethod.Invoke(this, Array.Empty<object>());
     }
 
-    protected virtual Task ConnectAsync(CancellationToken token = default)
+    protected virtual IDatabase Connect()
+    { 
+        return (IDatabase)ConnectMethod.Invoke(this, Array.Empty<object>())!;
+    }
+
+    protected virtual async ValueTask<IDatabase> ConnectAsync(CancellationToken token = default)
     {
-        if (GetRedisDatabase() != null)
-        {
-            return Task.CompletedTask;
-        }
-
-        return (Task)ConnectAsyncMethod.Invoke(this, new object[] { token });
+        return await (ValueTask<IDatabase>)ConnectAsyncMethod.Invoke(this, new object[] { token })!;
     }
 
-    public byte[][] GetMany(
+    public byte[]?[] GetMany(
         IEnumerable<string> keys)
     {
         keys = Check.NotNull(keys, nameof(keys));
@@ -101,7 +95,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         return GetAndRefreshMany(keys, true);
     }
 
-    public async Task<byte[][]> GetManyAsync(
+    public async Task<byte[]?[]> GetManyAsync(
         IEnumerable<string> keys,
         CancellationToken token = default)
     {
@@ -114,9 +108,17 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         IEnumerable<KeyValuePair<string, byte[]>> items,
         DistributedCacheEntryOptions options)
     {
-        Connect();
+        var cache = Connect();
 
-        Task.WaitAll(PipelineSetMany(items, options));
+        try
+        {
+            Task.WaitAll(PipelineSetMany(cache, items, options));
+        }
+        catch (Exception ex)
+        {
+            OnRedisError(ex, cache);
+            throw;
+        }
     }
 
     public async Task SetManyAsync(
@@ -126,9 +128,17 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
     {
         token.ThrowIfCancellationRequested();
 
-        await ConnectAsync(token);
+        var cache = await ConnectAsync(token);
 
-        await Task.WhenAll(PipelineSetMany(items, options));
+        try
+        {
+            await Task.WhenAll(PipelineSetMany(cache, items, options));
+        }
+        catch (Exception ex)
+        {
+            OnRedisError(ex, cache);
+            throw;
+        }
     }
 
     public void RefreshMany(
@@ -152,9 +162,17 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
     {
         keys = Check.NotNull(keys, nameof(keys));
 
-        Connect();
+        var cache = Connect();
 
-        RedisDatabase.KeyDelete(keys.Select(key => (RedisKey)(Instance + key)).ToArray());
+        try
+        {
+            cache.KeyDelete(keys.Select(key => InstancePrefix.Append(key)).ToArray());
+        }
+        catch (Exception ex)
+        {
+            OnRedisError(ex, cache);
+            throw;
+        }
     }
 
     public async Task RemoveManyAsync(IEnumerable<string> keys, CancellationToken token = default)
@@ -162,68 +180,74 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         keys = Check.NotNull(keys, nameof(keys));
 
         token.ThrowIfCancellationRequested();
-        await ConnectAsync(token);
+        var cache = await ConnectAsync(token);
 
-        await RedisDatabase.KeyDeleteAsync(keys.Select(key => (RedisKey)(Instance + key)).ToArray());
+        try
+        {
+            await cache.KeyDeleteAsync(keys.Select(key => InstancePrefix.Append(key)).ToArray());
+        }
+        catch (Exception ex)
+        {
+            OnRedisError(ex, cache);
+            throw;
+        }
     }
 
-    protected virtual byte[][] GetAndRefreshMany(
+    protected virtual byte[]?[] GetAndRefreshMany(
         IEnumerable<string> keys,
         bool getData)
     {
-        Connect();
+       var cache = Connect();
 
-        var keyArray = keys.Select(key => Instance + key).ToArray();
-        RedisValue[][] results;
+        var keyArray = keys.Select(key => InstancePrefix.Append( key)).ToArray();
+        byte[]?[] bytes;
 
-        if (getData)
+        try
         {
-            results = RedisDatabase.HashMemberGetMany(keyArray, AbsoluteExpirationKey,
-                SlidingExpirationKey, DataKey);
-        }
-        else
-        {
-            results = RedisDatabase.HashMemberGetMany(keyArray, AbsoluteExpirationKey,
-                SlidingExpirationKey);
-        }
+            var results = cache.HashMemberGetMany(keyArray, GetHashFields(getData));
 
-        Task.WaitAll(PipelineRefreshManyAndOutData(keyArray, results, out var bytes));
+            Task.WaitAll(PipelineRefreshManyAndOutData(cache, keyArray, results, out bytes));
+        }
+        catch (Exception ex)
+        {
+            OnRedisError(ex, cache);
+            throw;
+        }
 
         return bytes;
     }
 
-    protected virtual async Task<byte[][]> GetAndRefreshManyAsync(
+    protected virtual async Task<byte[]?[]> GetAndRefreshManyAsync(
         IEnumerable<string> keys,
         bool getData,
         CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
 
-        await ConnectAsync(token);
+        var cache = await ConnectAsync(token);
 
-        var keyArray = keys.Select(key => Instance + key).ToArray();
-        RedisValue[][] results;
+        var keyArray = keys.Select(key => InstancePrefix.Append(key)).ToArray();
+        byte[]?[] bytes;
 
-        if (getData)
+        try
         {
-            results = await RedisDatabase.HashMemberGetManyAsync(keyArray, AbsoluteExpirationKey,
-                SlidingExpirationKey, DataKey);
+            var results = await cache.HashMemberGetManyAsync(keyArray, GetHashFields(getData));
+            await Task.WhenAll(PipelineRefreshManyAndOutData(cache, keyArray, results, out bytes));
         }
-        else
+        catch (Exception ex)
         {
-            results = await RedisDatabase.HashMemberGetManyAsync(keyArray, AbsoluteExpirationKey,
-                SlidingExpirationKey);
+            OnRedisError(ex, cache);
+            throw;
         }
-
-        await Task.WhenAll(PipelineRefreshManyAndOutData(keyArray, results, out var bytes));
-
+        
         return bytes;
     }
 
     protected virtual Task[] PipelineRefreshManyAndOutData(
-        string[] keys,
+        IDatabase cache,
+        RedisKey[] keys,
         RedisValue[][] results,
-        out byte[][] bytes)
+        out byte[]?[] bytes)
     {
         bytes = new byte[keys.Length][];
         var tasks = new Task[keys.Length];
@@ -232,7 +256,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         {
             if (results[i].Length >= 2)
             {
-                MapMetadata(results[i], out DateTimeOffset? absExpr, out TimeSpan? sldExpr);
+                MapMetadata(results[i], out var absExpr, out var sldExpr);
 
                 if (sldExpr.HasValue)
                 {
@@ -248,7 +272,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
                         expr = sldExpr;
                     }
 
-                    tasks[i] = RedisDatabase.KeyExpireAsync(keys[i], expr);
+                    tasks[i] = cache.KeyExpireAsync(keys[i], expr);
                 }
                 else
                 {
@@ -270,6 +294,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
     }
 
     protected virtual Task[] PipelineSetMany(
+        IDatabase cache,
         IEnumerable<KeyValuePair<string, byte[]>> items,
         DistributedCacheEntryOptions options)
     {
@@ -283,14 +308,13 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
 
         for (var i = 0; i < itemArray.Length; i++)
         {
-            tasks[i] = RedisDatabase.ScriptEvaluateAsync(SetScript, new RedisKey[] { Instance + itemArray[i].Key },
-                new RedisValue[]
-                {
-                        absoluteExpiration?.Ticks ?? NotPresent,
+            tasks[i] = cache.ScriptEvaluateAsync(GetSetScript(), new RedisKey[] { InstancePrefix.Append(itemArray[i].Key) },
+            [
+                absoluteExpiration?.Ticks ?? NotPresent,
                         options.SlidingExpiration?.Ticks ?? NotPresent,
                         GetExpirationInSeconds(creationTime, absoluteExpiration, options) ?? NotPresent,
                         itemArray[i].Value
-                });
+            ]);
         }
 
         return tasks;
@@ -301,7 +325,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         out DateTimeOffset? absoluteExpiration,
         out TimeSpan? slidingExpiration)
     {
-        var parameters = new object[] { results, null, null };
+        var parameters = new object?[] { results, null, null };
         MapMetadataMethod.Invoke(this, parameters);
 
         absoluteExpiration = (DateTimeOffset?)parameters[1];
@@ -314,7 +338,7 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
         DistributedCacheEntryOptions options)
     {
         return (long?)GetExpirationInSecondsMethod.Invoke(null,
-            new object[] { creationTime, absoluteExpiration, options });
+            new object?[] { creationTime, absoluteExpiration, options });
     }
 
     protected virtual DateTimeOffset? GetAbsoluteExpiration(
@@ -323,14 +347,21 @@ public class AbpRedisCache : RedisCache, ICacheSupportsMultipleItems
     {
         return (DateTimeOffset?)GetAbsoluteExpirationMethod.Invoke(null, new object[] { creationTime, options });
     }
-
-    private IDatabase GetRedisDatabase()
+    
+    protected virtual void OnRedisError(Exception ex, IDatabase cache)
     {
-        if (_redisDatabase == null)
-        {
-            _redisDatabase = RedisDatabaseField.GetValue(this) as IDatabase;
-        }
-
-        return _redisDatabase;
+        OnRedisErrorMethod.Invoke(this, [ex, cache]);
+    }
+    
+    private string GetSetScript()
+    {
+        return SetScriptField.GetValue(this)!.ToString()!;
+    }
+    
+    private static RedisValue[] GetHashFields(bool getData)
+    {
+        return getData
+            ? HashMembersAbsoluteExpirationSlidingExpirationData
+            : HashMembersAbsoluteExpirationSlidingExpiration;
     }
 }

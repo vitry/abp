@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
+using Volo.Abp.Features;
 using Volo.Abp.GlobalFeatures;
+using Volo.Abp.ObjectExtending;
+using Volo.CmsKit.Features;
 using Volo.CmsKit.GlobalFeatures;
 using Volo.CmsKit.Menus;
 using Volo.CmsKit.Pages;
@@ -14,6 +15,7 @@ using Volo.CmsKit.Permissions;
 
 namespace Volo.CmsKit.Admin.Menus;
 
+[RequiresFeature(CmsKitFeatures.MenuEnable)]
 [RequiresGlobalFeature(typeof(MenuFeature))]
 [Authorize(CmsKitAdminPermissions.Menus.Default)]
 public class MenuItemAdminAppService : CmsKitAdminAppServiceBase, IMenuItemAdminAppService
@@ -41,10 +43,17 @@ public class MenuItemAdminAppService : CmsKitAdminAppServiceBase, IMenuItemAdmin
         );
     }
 
-    public virtual async Task<MenuItemDto> GetAsync(Guid id)
+    public virtual async Task<MenuItemWithDetailsDto> GetAsync(Guid id)
     {
-        var menu = await MenuItemRepository.GetAsync(id);
-        return ObjectMapper.Map<MenuItem, MenuItemDto>(menu);
+        var menuItem = await MenuItemRepository.GetAsync(id);
+        var dto = ObjectMapper.Map<MenuItem, MenuItemWithDetailsDto>(menuItem);
+
+        if (menuItem.PageId.HasValue)
+        {
+            dto.PageTitle = await PageRepository.FindTitleAsync(menuItem.PageId.Value);
+        }
+
+        return dto;
     }
 
     [Authorize(CmsKitAdminPermissions.Menus.Create)]
@@ -68,7 +77,7 @@ public class MenuItemAdminAppService : CmsKitAdminAppServiceBase, IMenuItemAdmin
         {
             MenuManager.SetPageUrl(menuItem, await PageRepository.GetAsync(input.PageId.Value));
         }
-
+        input.MapExtraPropertiesTo(menuItem);
         await MenuItemRepository.InsertAsync(menuItem);
 
         return ObjectMapper.Map<MenuItem, MenuItemDto>(menuItem);
@@ -85,7 +94,7 @@ public class MenuItemAdminAppService : CmsKitAdminAppServiceBase, IMenuItemAdmin
         }
         else
         {
-            menuItem.SetUrl(input.Url);
+            MenuManager.SetPageUrl(menuItem, input.Url);
         }
 
         menuItem.SetDisplayName(input.DisplayName);
@@ -95,7 +104,7 @@ public class MenuItemAdminAppService : CmsKitAdminAppServiceBase, IMenuItemAdmin
         menuItem.ElementId = input.ElementId;
         menuItem.CssClass = input.CssClass;
         menuItem.SetConcurrencyStampIfNotNull(input.ConcurrencyStamp);
-
+        input.MapExtraPropertiesTo(menuItem);
         await MenuItemRepository.UpdateAsync(menuItem);
 
         return ObjectMapper.Map<MenuItem, MenuItemDto>(menuItem);

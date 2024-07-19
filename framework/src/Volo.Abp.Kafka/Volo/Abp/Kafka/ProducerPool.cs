@@ -32,25 +32,17 @@ public class ProducerPool : IProducerPool, ISingletonDependency
         Logger = new NullLogger<ProducerPool>();
     }
 
-    public virtual IProducer<string, byte[]> Get(string connectionName = null)
+    public virtual IProducer<string, byte[]> Get(string? connectionName = null)
     {
         connectionName ??= KafkaConnections.DefaultConnectionName;
 
         return Producers.GetOrAdd(
             connectionName, connection => new Lazy<IProducer<string, byte[]>>(() =>
             {
-                var producerConfig = new ProducerConfig(Options.Connections.GetOrDefault(connection));
+                var producerConfig = new ProducerConfig(Options.Connections.GetOrDefault(connection).ToDictionary(k => k.Key, v => v.Value));
                 Options.ConfigureProducer?.Invoke(producerConfig);
-
-                if (producerConfig.TransactionalId.IsNullOrWhiteSpace())
-                {
-                    producerConfig.TransactionalId = Guid.NewGuid().ToString();
-                }
+                return new ProducerBuilder<string, byte[]>(producerConfig).Build();
                 
-                var producer = new ProducerBuilder<string, byte[]>(producerConfig).Build();
-                producer.InitTransactions(DefaultTransactionsWaitDuration);
-                
-                return producer;
             })).Value;
     }
 

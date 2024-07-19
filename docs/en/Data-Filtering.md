@@ -217,17 +217,14 @@ protected override bool ShouldFilterEntity<TEntity>(IMutableEntityType entityTyp
     return base.ShouldFilterEntity<TEntity>(entityType);
 }
 
-protected override Expression<Func<TEntity, bool>> CreateFilterExpression<TEntity>()
+protected override Expression<Func<TEntity, bool>> CreateFilterExpression<TEntity>(ModelBuilder modelBuilder)
 {
-    var expression = base.CreateFilterExpression<TEntity>();
+    var expression = base.CreateFilterExpression<TEntity>(modelBuilder);
 
     if (typeof(IIsActive).IsAssignableFrom(typeof(TEntity)))
     {
-        Expression<Func<TEntity, bool>> isActiveFilter =
-            e => !IsActiveFilterEnabled || EF.Property<bool>(e, "IsActive");
-        expression = expression == null 
-            ? isActiveFilter 
-            : CombineExpressions(expression, isActiveFilter);
+        Expression<Func<TEntity, bool>> isActiveFilter = e => !IsActiveFilterEnabled || EF.Property<bool>(e, "IsActive");
+        expression = expression == null ? isActiveFilter : QueryFilterExpressionHelper.CombineExpressions(expression, isActiveFilter);
     }
 
     return expression;
@@ -237,11 +234,97 @@ protected override Expression<Func<TEntity, bool>> CreateFilterExpression<TEntit
 * Added a `IsActiveFilterEnabled` property to check if `IIsActive` is enabled or not. It internally uses the `IDataFilter` service introduced before.
 * Overrided the `ShouldFilterEntity` and `CreateFilterExpression` methods, checked if given entity implements the `IIsActive` interface and combines the expressions if necessary.
 
+In addition you can also use `HasAbpQueryFilter` to set a filter for an entity. It will combine your filter with ABP EF Core builtin global query filters.
+
+````csharp
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+    
+    modelBuilder.Entity<MyEntity>(b =>
+    {
+        b.HasAbpQueryFilter(e => e.Name.StartsWith("abp"));
+    });
+}
+````
+
+#### Using User-defined function mapping for global filters
+
+Using [User-defined function mapping](https://learn.microsoft.com/en-us/ef/core/querying/user-defined-function-mapping) for global filters will gain performance improvements. 
+
+To use this feature, you need to change your DbContext like below:
+
+````csharp
+protected bool IsActiveFilterEnabled => DataFilter?.IsEnabled<IIsActive>() ?? false;
+
+protected override bool ShouldFilterEntity<TEntity>(IMutableEntityType entityType)
+{
+    if (typeof(IIsActive).IsAssignableFrom(typeof(TEntity)))
+    {
+        return true;
+    }
+
+    return base.ShouldFilterEntity<TEntity>(entityType);
+}
+
+protected override Expression<Func<TEntity, bool>> CreateFilterExpression<TEntity>(ModelBuilder modelBuilder)
+{
+    var expression = base.CreateFilterExpression<TEntity>(modelBuilder);
+
+    if (typeof(IIsActive).IsAssignableFrom(typeof(TEntity)))
+    {
+        Expression<Func<TEntity, bool>> isActiveFilter = e => !IsActiveFilterEnabled || EF.Property<bool>(e, "IsActive");
+
+        if (UseDbFunction())
+        {
+            isActiveFilter = e => IsActiveFilter(((IIsActive)e).IsActive, true);
+
+            var abpEfCoreCurrentDbContext = this.GetService<AbpEfCoreCurrentDbContext>();
+            modelBuilder.HasDbFunction(typeof(MyProjectNameDbContext).GetMethod(nameof(IsActiveFilter))!)
+                .HasTranslation(args =>
+                {
+                    // (bool isActive, bool boolParam)
+                    var isActive = args[0];
+                    var boolParam = args[1];
+
+                    if (abpEfCoreCurrentDbContext.Context?.DataFilter.IsEnabled<IIsActive>() == true)
+                    {
+                        // isActive == true
+                        return new SqlBinaryExpression(
+                            ExpressionType.Equal,
+                            isActive,
+                            new SqlConstantExpression(Expression.Constant(true), boolParam.TypeMapping),
+                            boolParam.Type,
+                            boolParam.TypeMapping);
+                    }
+
+                    // empty where sql
+                    return new SqlConstantExpression(Expression.Constant(true), boolParam.TypeMapping);
+                });
+        }
+
+        expression = expression == null ? isActiveFilter : QueryFilterExpressionHelper.CombineExpressions(expression, isActiveFilter);
+    }
+
+    return expression;
+}
+
+public static bool IsActiveFilter(bool isActive, bool boolParam)
+{
+    throw new NotSupportedException(AbpEfCoreDataFilterDbFunctionMethods.NotSupportedExceptionMessage);
+}
+
+public override string GetCompiledQueryCacheKey()
+{
+    return $"{base.GetCompiledQueryCacheKey()}:{IsActiveFilterEnabled}";
+}
+````
+
 ### MongoDB
 
 ABP abstracts the `IMongoDbRepositoryFilterer` interface to implement data filtering for the [MongoDB Integration](MongoDB.md), it works only if you use the repositories properly. Otherwise, you should manually filter the data.
 
-Currently, the best way to implement a data filter for the MongoDB integration is to create a derived class of `MongoDbRepositoryFilterer` and override `AddGlobalFilters`. Example:
+Currently, the best way to implement a data filter for the MongoDB integration is to create a derived class of `MongoDbRepositoryFilterer` and override `FilterQueryable`. Example:
 
 ````csharp
 [ExposeServices(typeof(IMongoDbRepositoryFilterer<Book, Guid>))]
@@ -254,14 +337,14 @@ public class BookMongoDbRepositoryFilterer : MongoDbRepositoryFilterer<Book, Gui
     {
     }
 
-    public override void AddGlobalFilters(List<FilterDefinition<Book>> filters)
+    public override TQueryable FilterQueryable<TQueryable>(TQueryable query)
     {
-        base.AddGlobalFilters(filters);
-
         if (DataFilter.IsEnabled<IIsActive>())
         {
-            filters.Add(Builders<Book>.Filter.Eq(e => ((IIsActive)e).IsActive, true));
+            return (TQueryable)query.Where(x => x.IsActive);
         }
+
+        return base.FilterQueryable(query);
     }
 }
 ````

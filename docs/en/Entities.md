@@ -112,6 +112,21 @@ For the example above, the composite key is composed of `UserId` and `RoleId`. F
 
 > Also note that Entities with Composite Primary Keys cannot utilize the `IRepository<TEntity, TKey>` interface since it requires a single Id property.  However, you can always use `IRepository<TEntity>`. See [repositories documentation](Repositories.md) for more.
 
+### EntityEquals
+
+`Entity.EntityEquals(...)` method is used to check if two Entity Objects are equals.
+
+Example:
+
+```csharp
+Book book1 = ...
+Book book2 = ...
+
+if (book1.EntityEquals(book2)) //Check equality
+{
+    ...
+}
+```
 
 ## AggregateRoot Class
 
@@ -123,8 +138,8 @@ For the example above, the composite key is composed of `UserId` and `RoleId`. F
 
 ABP does not force you to use aggregate roots, you can in fact use the `Entity` class as defined before. However, if you want to implement the [Domain Driven Design](Domain-Driven-Design.md) and want to create aggregate root classes, there are some best practices you may want to consider:
 
-* An aggregate root is responsible to preserve it's own integrity. This is also true for all entities, but aggregate root has responsibility for it's sub entities too. So, the aggregate root must always be in a valid state.
-* An aggregate root can be referenced by it's Id. Do not reference it by it's navigation property.
+* An aggregate root is responsible for preserving its own integrity. This is also true for all entities, but the aggregate root has responsibility for its sub-entities too. So, the aggregate root must always be in a valid state.
+* An aggregate root can be referenced by its `Id`. Do not reference it by its navigation property.
 * An aggregate root is treated as a single unit. It's retrieved and updated as a single unit. It's generally considered as a transaction boundary.
 * Work with sub-entities over the aggregate root- do not modify them independently.
 
@@ -226,7 +241,7 @@ While this example may not implement all the best practices of an aggregate root
 * `Order` has a public constructor that takes **minimal requirements** to construct an `Order` instance. So, it's not possible to create an order without an id and reference number. The **protected/private** constructor is only necessary to **deserialize** the object while reading from a data source.
 * `OrderLine` constructor is internal, so it is only allowed to be created by the domain layer. It's used inside of the `Order.AddProduct` method.
 * `Order.AddProduct` implements the business rule to add a product to an order.
-* All properties have `protected` setters. This is to prevent the entity from arbitrary changes from outside of the entity. For example, it would be dangerous to set `TotalItemCount` without adding a new product to the order. It's value is maintained by the `AddProduct` method.
+* All properties have `protected` setters. This is to prevent the entity from arbitrary changes from outside of the entity. For example, it would be dangerous to set `TotalItemCount` without adding a new product to the order. Its value is maintained by the `AddProduct` method.
 
 ABP Framework does not force you to apply any DDD rule or patterns. However, it tries to make it possible and easier when you do want to apply them. The documentation also follows the same principle.
 
@@ -300,6 +315,29 @@ While you can manually implement any of the interfaces defined above, it is sugg
 All these base classes also have non-generic versions to take `AuditedEntity` and `FullAuditedAggregateRoot` to support the composite primary keys.
 
 All these base classes also have `...WithUser` pairs, like `FullAuditedAggregateRootWithUser<TUser>`  and `FullAuditedAggregateRootWithUser<TKey, TUser>`. This makes possible to add a navigation property to your user entity. However, it is not a good practice to add navigation properties between aggregate roots, so this usage is not suggested (unless you are using an ORM, like EF Core, that well supports this scenario and you really need it - otherwise remember that this approach doesn't work for NoSQL databases like MongoDB where you must truly implement the aggregate pattern). Also, if you add navigation properties to the AppUser class that comes with the startup template, consider to handle (ignore/map) it on the migration dbcontext (see [the EF Core migration document](Entity-Framework-Core-Migrations.md)). 
+
+## Caching Entities
+
+ABP Framework provides a [Distributed Entity Cache System](Entity-Cache.md) for caching entities. It is useful if you want to use caching for quicker access to the entity rather than repeatedly querying it from the database.
+
+It's designed as read-only and automatically invalidates a cached entity if the entity is updated or deleted.
+
+> See the [Entity Cache](Entity-Cache.md) documentation for more information.
+
+## Versioning Entities
+
+ABP defines the `IHasEntityVersion` interface for automatic versioning of your entities. It only provides a single `EntityVersion` property, as shown in the following code block:
+
+````csharp
+public interface IHasEntityVersion
+{
+    int EntityVersion { get; }
+}
+````
+
+If you implement the `IHasEntityVersion` interface, ABP automatically increases the `EntityVersion` value whenever you update your entity. The initial `EntityVersion` value will be `0`, when you first create an entity and save to the database.
+
+> ABP can not increase the version if you directly execute SQL `UPDATE` commands in the database. It is your responsibility to increase the `EntityVersion` value in that case. Also, if you are using the aggregate pattern and change sub-collections of an aggregate root, it is your responsibility if you want to increase the version of the aggregate root object.
 
 ## Extra Properties
 
@@ -400,3 +438,4 @@ You typically **don't need** to use this system for your own entities, because i
 ## See Also
 
 * [Best practice guide to design the entities](Best-Practices/Entities.md)
+* [Video tutorial](https://abp.io/video-courses/essentials/entities)
