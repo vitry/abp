@@ -38,6 +38,7 @@ public class BackgroundJobPlusWorker : AsyncPeriodicBackgroundWorkerBase, IBackg
         Timer.Period = WorkerOptions.JobPollPeriod;
     }
 
+    // 只发送任务
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
     {
         await using (var handler = await DistributedLock.TryAcquireAsync(DistributedLockName, cancellationToken: StoppingToken))
@@ -113,7 +114,7 @@ public class BackgroundJobPlusWorker : AsyncPeriodicBackgroundWorkerBase, IBackg
         }
     }
 
-    protected virtual async Task TryUpdateAsync(IBackgroundJobStore store, BackgroundJobInfo jobInfo)
+    protected virtual async Task TryUpdateAsync(IBackgroundJobStore store, BackgroundJobPlusInfo jobInfo)
     {
         try
         {
@@ -125,7 +126,7 @@ public class BackgroundJobPlusWorker : AsyncPeriodicBackgroundWorkerBase, IBackg
         }
     }
 
-    protected virtual DateTime? CalculateNextTryTime(BackgroundJobInfo jobInfo, IClock clock)
+    protected virtual DateTime? CalculateNextTryTime(BackgroundJobPlusInfo jobInfo, IClock clock)
     {
         var nextWaitDuration = WorkerOptions.DefaultFirstWaitDuration *
                                (Math.Pow(WorkerOptions.DefaultWaitFactor, jobInfo.TryCount - 1));

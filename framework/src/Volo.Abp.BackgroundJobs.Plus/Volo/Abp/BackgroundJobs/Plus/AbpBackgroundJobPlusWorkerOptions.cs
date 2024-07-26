@@ -21,7 +21,7 @@ public class AbpBackgroundJobPlusWorkerOptions
     public int DefaultFirstWaitDuration { get; set; }
 
     /// <summary>
-    /// Default timeout value (as seconds) for a job before it's abandoned (<see cref="BackgroundJobInfo.IsAbandoned"/>).
+    /// Default timeout value (as seconds) for a job before it's abandoned (<see cref="BackgroundJobPlusInfo.IsAbandoned"/>).
     /// Default value: 172,800 (2 days).
     /// </summary>
     public int DefaultTimeout { get; set; }

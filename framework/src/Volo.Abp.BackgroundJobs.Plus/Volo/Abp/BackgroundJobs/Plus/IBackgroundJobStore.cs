@@ -14,13 +14,13 @@ public interface IBackgroundJobStore
     /// </summary>
     /// <param name="jobId">The Job Unique Identifier.</param>
     /// <returns>The BackgroundJobInfo object.</returns>
-    Task<BackgroundJobInfo> FindAsync(Guid jobId);
+    Task<BackgroundJobPlusInfo> FindAsync(Guid jobId);
 
     /// <summary>
     /// Inserts a background job.
     /// </summary>
     /// <param name="jobInfo">Job information.</param>
-    Task InsertAsync(BackgroundJobInfo jobInfo);
+    Task InsertAsync(BackgroundJobPlusInfo jobInfo);
 
     /// <summary>
     /// Gets waiting jobs. It should get jobs based on these:
@@ -29,7 +29,7 @@ public interface IBackgroundJobStore
     /// Maximum result: <paramref name="maxResultCount"/>.
     /// </summary>
     /// <param name="maxResultCount">Maximum result count.</param>
-    Task<List<BackgroundJobInfo>> GetWaitingJobsAsync(int maxResultCount);
+    Task<List<BackgroundJobPlusInfo>> GetWaitingJobsAsync(int maxResultCount);
 
     /// <summary>
     /// Deletes a job.
@@ -41,5 +41,5 @@ public interface IBackgroundJobStore
     /// Updates a job.
     /// </summary>
     /// <param name="jobInfo">Job information.</param>
-    Task UpdateAsync(BackgroundJobInfo jobInfo);
+    Task UpdateAsync(BackgroundJobPlusInfo jobInfo);
 }

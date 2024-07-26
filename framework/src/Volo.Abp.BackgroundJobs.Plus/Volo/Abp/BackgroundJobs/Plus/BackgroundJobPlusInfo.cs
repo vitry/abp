@@ -1,12 +1,23 @@
 ﻿using System;
+using Volo.Abp.Data;
 
 namespace Volo.Abp.BackgroundJobs.Plus;
 
 /// <summary>
 /// Represents a background job info that is used to persist jobs.
 /// </summary>
-public class BackgroundJobInfo
+public class BackgroundJobPlusInfo : IHasExtraProperties
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BackgroundJobPlusInfo"/> class.
+    /// </summary>
+    public BackgroundJobPlusInfo()
+    {
+        ExtraProperties = new ExtraPropertyDictionary();
+        this.SetDefaultsForExtraProperties();
+        Priority = BackgroundJobPriority.Normal;
+    }
+
     public Guid Id { get; set; }
 
     /// <summary>
@@ -24,6 +35,11 @@ public class BackgroundJobInfo
     /// A job is re-tried if it fails.
     /// </summary>
     public virtual short TryCount { get; set; }
+
+    /// <summary>
+    /// Delay time of this job.
+    /// </summary>
+    public virtual DateTime DelayTimne { get; set; }
 
     /// <summary>
     /// Creation time of this job.
@@ -50,11 +66,5 @@ public class BackgroundJobInfo
     /// </summary>
     public virtual BackgroundJobPriority Priority { get; set; }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BackgroundJobInfo"/> class.
-    /// </summary>
-    public BackgroundJobInfo()
-    {
-        Priority = BackgroundJobPriority.Normal;
-    }
+    public ExtraPropertyDictionary ExtraProperties { get; protected set; }
 }
