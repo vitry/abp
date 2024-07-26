@@ -5,7 +5,7 @@ namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
 public interface IEasyNetQSubscriber
 {
-    void Initialize(string subscriptionId, string busName = null);
+    void Initialize(string subscriptionId, string? busName = null);
 
     void Subscribe(Type eventType);
 

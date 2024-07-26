@@ -43,18 +43,18 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
     }
 
     protected IBusPool BusPool { get; }
-    protected IBus Bus { get; private set; }
+    protected IBus? Bus { get; private set; }
     protected AbpAsyncTimer Timer { get; }
     protected IEasyNetQSerializer Serializer { get; }
     protected IExceptionNotifier ExceptionNotifier { get; }
-    protected string BusName { get; private set; }
+    protected string? BusName { get; private set; }
     protected ConcurrentBag<Func<object, string, Task>> Callbacks { get; }
     protected BlockingCollection<QueueSubscribeCommand> SubscribeCommandQueue { get; }
     protected ConcurrentDictionary<Type, IDisposable> Subscriptions { get; private set; }
 
-    public string SubscriptionId { get; private set; }
+    public string? SubscriptionId { get; private set; }
 
-    public void Initialize([NotNull] string subscriptionId, string busName = null)
+    public void Initialize([NotNull] string subscriptionId, string? busName = null)
     {
         Check.NotNullOrEmpty(subscriptionId, nameof(subscriptionId));
         SubscriptionId = subscriptionId;
@@ -79,6 +79,15 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
 
     protected virtual async Task StartSendQueueSubscribeCommandsAsync()
     {
+        if (Bus == null)
+        {
+            throw new ArgumentNullException(nameof(Bus));
+        }
+        if (string.IsNullOrEmpty(SubscriptionId))
+        {
+            throw new ArgumentNullException(nameof(SubscriptionId));
+        }
+
         try
         {
             while (SubscribeCommandQueue.TryTake(out var command))
@@ -86,8 +95,8 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
                 switch (command.Type)
                 {
                     case QueueSubscribeType.Subscribe:
-                        IDisposable subscription = null;
-                        ConsumerConfiguration config = _options.GetConsumerConfiguration(command.EventType);
+                        IDisposable? subscription = null;
+                        ConsumerConfiguration? config = _options.GetConsumerConfiguration(command.EventType);
                         if (config != null)
                         {
                             var exchage = Bus.Advanced.ExchangeDeclare(config.ExchangeName, config.ExchangeType);
@@ -99,7 +108,7 @@ public class EasyNetQSubscriber : IEasyNetQSubscriber, ISingletonDependency, IDi
                         }
                         else
                         {
-                            subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId, command.EventType,
+                            subscription = await Bus.PubSub.SubscribeAsync(SubscriptionId!, command.EventType,
                                 (obj, type, cancelToken) => HandleIncomingMessageAsync(obj, type, cancelToken),
                                 c => _options.GetSubscribeConfiguration(command.EventType)?.Specify(c)
                             );

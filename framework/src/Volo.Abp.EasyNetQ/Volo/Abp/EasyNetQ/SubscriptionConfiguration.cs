@@ -5,10 +5,10 @@ namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
 public class SubscriptionConfiguration
 {
-    public IList<string> Topics { get; set; }
+    public IList<string>? Topics { get; set; }
     public ushort? PrefetchCount { get; set; }
     public int? Expires { get; set; }
-    public string QueueName { get; set; }
+    public string? QueueName { get; set; }
 
     public void Specify(ISubscriptionConfiguration config)
     {

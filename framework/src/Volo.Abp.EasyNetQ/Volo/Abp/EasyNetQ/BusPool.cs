@@ -20,7 +20,7 @@ public class BusPool : IBusPool, ISingletonDependency
         LazyBuses = new ConcurrentDictionary<string, Lazy<IBus>>();
     }
 
-    public virtual IBus Get(string busName = null)
+    public virtual IBus Get(string? busName = null)
     {
         busName ??= EasyNetQBuses.DefaultBusName;
 

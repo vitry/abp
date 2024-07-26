@@ -5,7 +5,7 @@ namespace Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 
 public class PublishConfiguration
 {
-    public string Topic { get; set; }
+    public string? Topic { get; set; }
 
     public int? Expires { get; set; }
 

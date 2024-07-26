@@ -39,21 +39,21 @@ public class AbpEasyNetQOptions
         BusServiceRegister = register;
     }
 
-    public PublishConfiguration GetPublishConfiguration(Type type)
+    public PublishConfiguration? GetPublishConfiguration(Type type)
     {
-        EventTypeNamePublishConfigurations.TryGetValue(type.FullName, out var config);
+        EventTypeNamePublishConfigurations.TryGetValue(type?.FullName ?? "", out var config);
         return config;
     }
 
-    public SubscriptionConfiguration GetSubscribeConfiguration(Type type)
+    public SubscriptionConfiguration? GetSubscribeConfiguration(Type type)
     {
-        EventTypeNameSubscribeConfigurations.TryGetValue(type.FullName, out var config);
+        EventTypeNameSubscribeConfigurations.TryGetValue(type?.FullName ?? "", out var config);
         return config;
     }
 
-    public ConsumerConfiguration GetConsumerConfiguration(Type type)
+    public ConsumerConfiguration? GetConsumerConfiguration(Type type)
     {
-        EventTypeNameConsumerConfigurations.TryGetValue(type.FullName, out var config);
+        EventTypeNameConsumerConfigurations.TryGetValue(type?.FullName ?? "", out var config);
         return config;
     }
 }

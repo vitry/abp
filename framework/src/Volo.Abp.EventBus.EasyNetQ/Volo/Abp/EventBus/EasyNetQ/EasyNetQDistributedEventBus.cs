@@ -10,10 +10,12 @@ using Volo.Abp.DependencyInjection;
 using Volo.Abp.EasyNetQ;
 using Volo.Abp.EasyNetQ.Volo.Abp.EasyNetQ;
 using Volo.Abp.EventBus.Distributed;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Guids;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Threading;
 using Volo.Abp.Timing;
+using Volo.Abp.Tracing;
 using Volo.Abp.Uow;
 
 namespace Volo.Abp.EventBus.EasyNetQ;
@@ -40,7 +42,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
         IEasyNetQSubscriber subscriber,
         IGuidGenerator guidGenerator,
         IClock clock,
-        IEventHandlerInvoker eventHandlerInvoker)
+        IEventHandlerInvoker eventHandlerInvoker,
+        ILocalEventBus localEventBus,
+        ICorrelationIdProvider correlationIdProvider)
         : base(
             serviceScopeFactory,
             currentTenant,
@@ -48,7 +52,9 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
             abpDistributedEventBusOptions,
             guidGenerator,
             clock,
-            eventHandlerInvoker)
+            eventHandlerInvoker,
+            localEventBus,
+            correlationIdProvider)
     {
         AbpEasyNetQEventBusOptions = options.Value;
         BusPool = busPool;
@@ -75,8 +81,7 @@ public class EasyNetQDistributedEventBus : DistributedEventBusBase, ISingletonDe
 
         var eventBytes = Serializer.Serialize(eventData);
 
-        // miss messageid
-        if (await AddToInboxAsync("", eventName, eventType, eventBytes))
+        if (await AddToInboxAsync(GuidGenerator.Create().ToString(), eventName, eventType, eventBytes, "no-correlationId"))
         {
             return;
         }
